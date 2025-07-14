@@ -46,7 +46,7 @@ export default function Landing() {
   }, []);
 
   return (
-    <main className="relative min-h-screen bg-[#0F172A] text-white font-sans overflow-hidden">
+    <main className="relative min-h-screen bg-[#0F172A] text-white font-inter overflow-hidden scroll-smooth">
       <AnimatedBackground />
 
       {/* Intro */}
@@ -74,7 +74,7 @@ export default function Landing() {
 
         <a
           href="/LoginRegister"
-          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold rounded-full px-12 py-4 shadow-lg transition hover:shadow-cyan-400 animate-pulse"
+          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold rounded-full px-12 py-4 shadow-xl hover:shadow-cyan-400 transition-all duration-300 transform hover:scale-105 animate-pulse"
         >
           Empezar ahora
         </a>
@@ -110,15 +110,15 @@ export default function Landing() {
             <div
               key={plan.name}
               onClick={() => setSelectedPlan(plan)}
-              className={`bg-[#0E1A38] rounded-xl p-8 shadow-lg cursor-pointer transform transition-all duration-300 hover:scale-105 ${
-                selectedPlan?.name === plan.name ? "border-4 border-cyan-500" : ""
+              className={`bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+                selectedPlan?.name === plan.name ? "border-2 border-cyan-400" : ""
               }`}
             >
               <h3 className="text-2xl font-bold mb-4 text-cyan-300">{plan.name}</h3>
               <div className="text-3xl font-extrabold text-white mb-2">{plan.price}</div>
-              <p className="text-gray-400 mb-1">{plan.briefsIncluded} briefs incluidos</p>
+              <p className="text-gray-300 mb-1">{plan.briefsIncluded} briefs incluidos</p>
               <p className="text-gray-400 mb-4">Extra: {plan.pricePerExtraBrief}</p>
-              <p className="text-gray-300 text-sm">{plan.description}</p>
+              <p className="text-gray-200 text-sm">{plan.description}</p>
             </div>
           ))}
         </div>
@@ -132,26 +132,24 @@ export default function Landing() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto text-left">
-          {[
-            {
-              name: "Ana Martínez",
-              role: "Brand Strategist",
-              text: "BriefMind me ahorra horas. Los briefs son claros, organizados y listos para el cliente.",
-            },
-            {
-              name: "Carlos Gómez",
-              role: "Consultor de Marketing",
-              text: "Mis clientes notaron la diferencia desde el primer brief. Herramienta imprescindible.",
-            },
-            {
-              name: "Laura Ríos",
-              role: "Agencia Boutique",
-              text: "Colaborar en equipo nunca fue tan fácil. Todo el equipo genera briefs claros y consistentes.",
-            },
-          ].map((op) => (
+          {[{
+            name: "Ana Martínez",
+            role: "Brand Strategist",
+            text: "BriefMind me ahorra horas. Los briefs son claros, organizados y listos para el cliente.",
+          },
+          {
+            name: "Carlos Gómez",
+            role: "Consultor de Marketing",
+            text: "Mis clientes notaron la diferencia desde el primer brief. Herramienta imprescindible.",
+          },
+          {
+            name: "Laura Ríos",
+            role: "Agencia Boutique",
+            text: "Colaborar en equipo nunca fue tan fácil. Todo el equipo genera briefs claros y consistentes.",
+          }].map((op) => (
             <blockquote
               key={op.name}
-              className="bg-[#0E1A38] p-6 rounded-lg shadow-md text-gray-300"
+              className="bg-white/5 backdrop-blur-md p-6 rounded-xl shadow-lg text-gray-300 border border-white/10 hover:scale-[1.02] transition-all duration-300"
             >
               <p className="italic mb-4">“{op.text}”</p>
               <div className="font-semibold text-white">{op.name}</div>
@@ -169,7 +167,7 @@ export default function Landing() {
         </p>
         <a
           href="/"
-          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold rounded-full px-10 py-4 shadow-lg transition animate-pulse"
+          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold rounded-full px-10 py-4 shadow-lg hover:shadow-cyan-400 transition-all duration-300 animate-pulse"
         >
           Crear mi primer brief
         </a>

@@ -6,72 +6,128 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Crear proyecto con generación de brief y verificación de créditos
-exports.createProject = async (req: { body: any; }, res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message?: string; error?: string; }): void; new(): any; }; }; }) => {
+exports.createProject = async (req: { body: any; }, res: { status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message?: string; error?: string; }): any; new(): any; }; }; }) => {
   const data = req.body;
   const userId = data.user_id;
 
-  try {
-    // 1. Verificar si el usuario existe y tiene briefs disponibles
-    const userResult = await pool.query('SELECT briefs_available FROM users WHERE id = $1', [userId]);
+  if (!userId) {
+    return res.status(400).json({ message: 'El campo user_id es obligatorio.' });
+  }
 
+  // Función para limpiar texto (trim y fallback a cadena vacía)
+  function safeString(value: string) {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  // Función para procesar arrays, limpiando cada elemento y uniendo por coma
+  function safeArrayJoin(arr: any[]) {
+    if (!Array.isArray(arr)) return '';
+    return arr.filter(item => !!item).map(safeString).join(', ');
+  }
+
+  // Prepara las variables para el prompt, limpiando y formateando arrays
+  const promptData = {
+    project_name: safeString(data.project_name),
+    client_name: safeString(data.client_name),
+    start_date: safeString(data.start_date),
+    delivery_date: safeString(data.delivery_date),
+    website: safeString(data.website),
+    main_goal: safeString(data.main_goal),
+    secondary_goals: safeString(data.secondary_goals),
+    current_situation: safeString(data.current_situation),
+    challenges: safeString(data.challenges),
+    target_audience: safeString(data.target_audience),
+    audience_needs: safeString(data.audience_needs),
+    main_message: safeString(data.main_message),
+    differentiation: safeString(data.differentiation),
+    tone: safeString(data.tone),
+    channels: safeArrayJoin(data.channels),
+    deliverable_formats: safeArrayJoin(data.deliverable_formats),
+    expected_deliverables: safeString(data.expected_deliverables),
+    limitations: safeString(data.limitations),
+    competitors: safeString(data.competitors),
+    reference_links: safeString(data.reference_links),
+    budget: safeString(data.budget),
+    resources: safeString(data.resources),
+    milestones: safeString(data.milestones),
+    deadlines: safeString(data.deadlines),
+    restrictions: safeString(data.restrictions),
+    notes: safeString(data.notes),
+    branding_links: safeString(data.branding_links),
+    final_format: safeString(data.final_format),
+  };
+
+  // Construir el prompt dinámico con interpolación segura
+  const prompt = `
+You are a senior marketing strategist and expert in writing professional creative briefs for agencies, creative teams, and digital marketing campaigns.
+
+Using the information provided below, generate a complete and well-structured creative brief in **English** that is:
+
+- Clear and easy to understand.
+- Visually organized with **section titles**, **subtitles**, and **bullet points** where relevant.
+- Suitable for use by marketing teams, designers, copywriters, or project managers.
+- Structured to flow logically from general context to detailed deliverables.
+- **Exclude any sections where data is missing or not provided**.
+- The tone should be professional but friendly, and concise.
+
+Here is the input data:
+
+${promptData.project_name ? `- Project Name: ${promptData.project_name}` : ''}
+${promptData.client_name ? `- Client Name: ${promptData.client_name}` : ''}
+${promptData.start_date ? `- Start Date: ${promptData.start_date}` : ''}
+${promptData.delivery_date ? `- Delivery Date: ${promptData.delivery_date}` : ''}
+${promptData.website ? `- Website / Social Media: ${promptData.website}` : ''}
+${promptData.main_goal ? `- Primary Objective: ${promptData.main_goal}` : ''}
+${promptData.secondary_goals ? `- Secondary Goals: ${promptData.secondary_goals}` : ''}
+${promptData.current_situation ? `- Current Situation: ${promptData.current_situation}` : ''}
+${promptData.challenges ? `- Challenges: ${promptData.challenges}` : ''}
+${promptData.target_audience ? `- Target Audience: ${promptData.target_audience}` : ''}
+${promptData.audience_needs ? `- Audience Needs: ${promptData.audience_needs}` : ''}
+${promptData.main_message ? `- Main Message: ${promptData.main_message}` : ''}
+${promptData.differentiation ? `- Product/Service Differentiation: ${promptData.differentiation}` : ''}
+${promptData.tone ? `- Tone of Communication: ${promptData.tone}` : ''}
+${promptData.channels ? `- Distribution Channels: ${promptData.channels}` : ''}
+${promptData.deliverable_formats ? `- Deliverable Formats: ${promptData.deliverable_formats}` : ''}
+${promptData.expected_deliverables ? `- Expected Deliverables: ${promptData.expected_deliverables}` : ''}
+${promptData.limitations ? `- Constraints or Limitations: ${promptData.limitations}` : ''}
+${promptData.competitors ? `- Main Competitors: ${promptData.competitors}` : ''}
+${promptData.reference_links ? `- References or Inspirations: ${promptData.reference_links}` : ''}
+${promptData.budget ? `- Budget: ${promptData.budget}` : ''}
+${promptData.resources ? `- Available Resources: ${promptData.resources}` : ''}
+${promptData.milestones ? `- Key Milestones and Deadlines: ${promptData.milestones}` : ''}
+${promptData.deadlines ? `- Final Deadlines: ${promptData.deadlines}` : ''}
+${promptData.restrictions ? `- Additional Restrictions: ${promptData.restrictions}` : ''}
+${promptData.notes ? `- Notes or Comments: ${promptData.notes}` : ''}
+${promptData.branding_links ? `- Branding / Visual Identity Links: ${promptData.branding_links}` : ''}
+${promptData.final_format ? `- Required Final Format: ${promptData.final_format}` : ''}
+
+Please format the output using markdown-style **titles**, and structure the content to be exported as a well-designed PDF brief.
+
+Do not repeat empty or missing data. Include only relevant and available information. Ensure the brief is aligned with strategic marketing objectives.
+`;
+
+  try {
+    // Verificar usuario y briefs disponibles
+    const userResult = await pool.query('SELECT briefs_available FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
-
-    const briefs = userResult.rows[0].briefs_available;
-
-    if (briefs <= 0) {
+    if (userResult.rows[0].briefs_available <= 0) {
       return res.status(403).json({ message: 'No tienes briefs disponibles' });
     }
 
-    // 2. Generar el brief con OpenAI
-    const prompt = `
-Eres un asistente experto en marketing digital. Genera un brief profesional, claro y bien estructurado para un proyecto con esta información:
-
-- Nombre del proyecto: ${data.project_name}
-- Cliente: ${data.client_name}
-- Fecha de inicio: ${data.start_date}
-- Fecha de entrega: ${data.delivery_date}
-- Sitio web o redes sociales: ${data.website}
-- Objetivo principal: ${data.main_goal}
-- Objetivos secundarios: ${data.secondary_goals}
-- Situación actual: ${data.current_situation}
-- Retos y desafíos: ${data.challenges}
-- Público objetivo: ${data.target_audience}
-- Necesidades del público: ${data.audience_needs}
-- Mensaje principal a comunicar: ${data.main_message}
-- Diferenciación del producto o servicio: ${data.differentiation}
-- Tono de comunicación: ${data.tone}
-- Canales de difusión: ${data.channels.join(", ")}
-- Formatos de entregables: ${data.deliverable_formats.join(", ")}
-- Entregables esperados y formato final: ${data.expected_deliverables}
-- Restricciones o limitaciones: ${data.limitations}
-- Competidores principales: ${data.competitors}
-- Referencias: ${data.reference_links}
-- Presupuesto: ${data.budget}
-- Recursos disponibles: ${data.resources}
-- Hitos y fechas clave: ${data.milestones}
-- Plazos definitivos: ${data.deadlines}
-- Restricciones adicionales: ${data.restrictions}
-- Notas adicionales: ${data.notes}
-- Enlaces de branding o identidad visual: ${data.branding_links}
-- Formato final requerido: ${data.final_format}
-
-El brief debe estar en ingles, ser claro y fácil de entender.Si algun campo no se detecta se omitira en la salida. Organiza la información en secciones con títulos claros.
-`;
-
+    // Solicitar generación de brief a OpenAI
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const generatedBrief = completion.choices[0].message?.content ?? '';
+    const generatedBrief = completion.choices[0].message?.content || '';
 
-    // 3. Iniciar transacción
+    // Iniciar transacción
     await pool.query('BEGIN');
 
-    // 4. Guardar el proyecto en la base de datos
+    // Guardar proyecto en la BD
     const projectResult = await pool.query(
       `INSERT INTO projects (
         user_id, client_name, project_name, start_date, delivery_date, website,
@@ -90,29 +146,52 @@ El brief debe estar en ingles, ser claro y fácil de entender.Si algun campo no 
       ) RETURNING *`,
       [
         userId,
-        data.client_name, data.project_name, data.start_date, data.delivery_date, data.website,
-        data.main_goal, data.secondary_goals, data.current_situation, data.challenges, data.target_audience,
-        data.audience_needs, data.main_message, data.differentiation, data.tone, data.channels,
-        data.deliverable_formats, data.expected_deliverables, data.limitations, data.competitors, data.reference_links,
-        data.budget, data.resources, data.milestones, data.deadlines, data.restrictions, data.notes,
-        data.branding_links, data.final_format, generatedBrief
+        promptData.client_name,
+        promptData.project_name,
+        promptData.start_date,
+        promptData.delivery_date,
+        promptData.website,
+        promptData.main_goal,
+        promptData.secondary_goals,
+        promptData.current_situation,
+        promptData.challenges,
+        promptData.target_audience,
+        promptData.audience_needs,
+        promptData.main_message,
+        promptData.differentiation,
+        promptData.tone,
+        promptData.channels ? promptData.channels.split(', ').filter(Boolean) : [],
+        promptData.deliverable_formats ? promptData.deliverable_formats.split(', ').filter(Boolean) : [],
+        promptData.expected_deliverables,
+        promptData.limitations,
+        promptData.competitors,
+        promptData.reference_links,
+        promptData.budget,
+        promptData.resources,
+        promptData.milestones,
+        promptData.deadlines,
+        promptData.restrictions,
+        promptData.notes,
+        promptData.branding_links,
+        promptData.final_format,
+        generatedBrief,
       ]
     );
 
-    // 5. Descontar 1 brief al usuario
-    await pool.query(
-      'UPDATE users SET briefs_available = briefs_available - 1 WHERE id = $1',
-      [userId]
-    );
+    // Descontar 1 brief disponible
+    await pool.query('UPDATE users SET briefs_available = briefs_available - 1 WHERE id = $1', [userId]);
 
-    // 6. Confirmar transacción
+    // Confirmar transacción
     await pool.query('COMMIT');
 
-    res.status(201).json(projectResult.rows[0]);
-
+    return res.status(201).json(projectResult.rows[0]);
   } catch (err) {
     console.error('Error al crear proyecto:', err);
-    await pool.query('ROLLBACK');
-    res.status(500).json({ error: 'Error al guardar el proyecto' });
+    try {
+      await pool.query('ROLLBACK');
+    } catch (rollbackErr) {
+      console.error('Error haciendo rollback:', rollbackErr);
+    }
+    return res.status(500).json({ error: 'Error al guardar el proyecto' });
   }
 };

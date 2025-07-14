@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaCheckCircle } from 'react-icons/fa';
 import Link from 'next/link';
+import { loadStripe } from '@stripe/stripe-js';
 
 const Loader = () => (
   <div className="flex justify-center items-center space-x-2">
@@ -12,6 +13,9 @@ const Loader = () => (
     <div className="w-3 h-3 rounded-full bg-cyan-400 animate-bounce animation-delay-400" />
   </div>
 );
+
+// ⚠️ Coloca aquí tu clave pública real de Stripe
+const stripePromise = loadStripe('pk_test_tu_clave_publica_de_stripe');
 
 export default function BuyBrief() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -73,26 +77,29 @@ export default function BuyBrief() {
     setSuccess(false);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${userId}/buy-brief`, {
-        method: 'PUT',
+      const res = await fetch(`http://localhost:5000/api/users/${userId}/briefs/checkout-session`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ quantity }),
+        body: JSON.stringify({
+          quantity,
+        }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.message || 'Error al comprar briefs');
+      if (!res.ok || !data.sessionId) {
+        throw new Error(data.message || 'Error al crear sesión de pago.');
       }
 
-      setBriefsAvailable(data.briefs_available);
-      setBriefsUsed(data.briefs_used);
-      setSuccess(true);
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe no se cargó correctamente.');
+
+      await stripe.redirectToCheckout({ sessionId: data.sessionId });
     } catch (error: any) {
-      alert('No se pudo completar la compra: ' + error.message);
+      alert('No se pudo iniciar el pago: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -113,7 +120,6 @@ export default function BuyBrief() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#0F172A] to-[#1a1f36] text-white">
-      {/* NAVBAR */}
       <nav className="w-full bg-[#1E293B] px-6 py-4 flex justify-between items-center border-b border-cyan-600">
         <div className="text-cyan-400 font-bold text-xl">BriefMind</div>
         <div className="flex gap-6 text-sm md:text-base items-center">
@@ -130,7 +136,6 @@ export default function BuyBrief() {
         </div>
       </nav>
 
-      {/* CONTENIDO PRINCIPAL */}
       <section className="py-16 px-6 md:px-20 lg:px-40 flex items-center justify-center">
         <div className="max-w-2xl w-full bg-[#1E293B] p-10 rounded-3xl shadow-2xl border border-cyan-500 transition-all duration-300">
           <h1 className="text-4xl font-extrabold text-center mb-4 text-cyan-300">

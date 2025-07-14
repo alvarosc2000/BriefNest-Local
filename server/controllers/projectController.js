@@ -1,18 +1,19 @@
 const pool = require('../db');
 const OpenAI = require('openai');
+const PDFDocument = require('pdfkit');
 
 // Configurar OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Crear proyecto con generación de brief y verificación de créditos
+// Crear proyecto con generación de brief y descarga automática del PDF
 exports.createProject = async (req, res) => {
   const data = req.body;
   const userId = data.user_id;
 
   try {
-    // 1. Verificar si el usuario existe y tiene briefs disponibles
+    // 1. Verificar usuario y briefs disponibles
     const userResult = await pool.query('SELECT briefs_available FROM users WHERE id = $1', [userId]);
 
     if (userResult.rows.length === 0) {
@@ -25,44 +26,58 @@ exports.createProject = async (req, res) => {
       return res.status(403).json({ message: 'No tienes briefs disponibles' });
     }
 
-    // 2. Generar el brief con OpenAI
+    // 2. Prompt para la IA
     const prompt = `
-Eres un asistente experto en marketing digital. Genera un brief profesional, claro y bien estructurado para un proyecto con esta información:
+      You are a senior marketing strategist and expert in writing professional creative briefs for agencies, creative teams, and digital marketing campaigns.
 
-- Nombre del proyecto: ${data.project_name}
-- Cliente: ${data.client_name}
-- Fecha de inicio: ${data.start_date}
-- Fecha de entrega: ${data.delivery_date}
-- Sitio web o redes sociales: ${data.website}
-- Objetivo principal: ${data.main_goal}
-- Objetivos secundarios: ${data.secondary_goals}
-- Situación actual: ${data.current_situation}
-- Retos y desafíos: ${data.challenges}
-- Público objetivo: ${data.target_audience}
-- Necesidades del público: ${data.audience_needs}
-- Mensaje principal a comunicar: ${data.main_message}
-- Diferenciación del producto o servicio: ${data.differentiation}
-- Tono de comunicación: ${data.tone}
-- Canales de difusión: ${Array.isArray(data.channels) ? data.channels.join(", ") : data.channels}
-- Formatos de entregables: ${Array.isArray(data.deliverable_formats) ? data.deliverable_formats.join(", ") : data.deliverable_formats}
-- Entregables esperados y formato final: ${data.expected_deliverables}
-- Restricciones o limitaciones: ${data.limitations}
-- Competidores principales: ${data.competitors}
-- Referencias: ${data.reference_links}
-- Presupuesto: ${data.budget}
-- Recursos disponibles: ${data.resources}
-- Hitos y fechas clave: ${data.milestones}
-- Plazos definitivos: ${data.deadlines}
-- Restricciones adicionales: ${data.restrictions}
-- Notas adicionales: ${data.notes}
-- Enlaces de branding o identidad visual: ${data.branding_links}
-- Formato final requerido: ${data.final_format}
+      Using the information provided below, generate a complete and well-structured creative brief in **English** that is:
 
-El brief debe estar en español, ser claro y fácil de entender. Organiza la información en secciones con títulos claros.
-`;
+      - Clear and easy to understand.
+      - Visually organized with **section titles**, **subtitles**, and **bullet points** where relevant.
+      - Suitable for use by marketing teams, designers, copywriters, or project managers.
+      - Structured to flow logically from general context to detailed deliverables.
+      - **Exclude any sections where data is missing or not provided**.
+      - The tone should be professional but friendly, and concise.
+
+      Here is the input data:
+
+      - Project Name: ${data.project_name}
+      - Client Name: ${data.client_name}
+      - Start Date: ${data.start_date}
+      - Delivery Date: ${data.delivery_date}
+      - Website / Social Media: ${data.website}
+      - Primary Objective: ${data.main_goal}
+      - Secondary Goals: ${data.secondary_goals}
+      - Current Situation: ${data.current_situation}
+      - Challenges: ${data.challenges}
+      - Target Audience: ${data.target_audience}
+      - Audience Needs: ${data.audience_needs}
+      - Main Message: ${data.main_message}
+      - Product/Service Differentiation: ${data.differentiation}
+      - Tone of Communication: ${data.tone}
+      - Distribution Channels: ${Array.isArray(data.channels) ? data.channels.join(", ") : data.channels}
+      - Deliverable Formats: ${Array.isArray(data.deliverable_formats) ? data.deliverable_formats.join(", ") : data.deliverable_formats}
+      - Expected Deliverables: ${data.expected_deliverables}
+      - Constraints or Limitations: ${data.limitations}
+      - Main Competitors: ${data.competitors}
+      - References or Inspirations: ${data.reference_links}
+      - Budget: ${data.budget}
+      - Available Resources: ${data.resources}
+      - Key Milestones and Deadlines: ${data.milestones}
+      - Final Deadlines: ${data.deadlines}
+      - Additional Restrictions: ${data.restrictions}
+      - Notes or Comments: ${data.notes}
+      - Branding / Visual Identity Links: ${data.branding_links}
+      - Required Final Format: ${data.final_format}
+
+      Please format the output using markdown-style **titles**, and structure the content to be exported as a well-designed PDF brief.
+
+      Do not repeat empty or missing data. Include only relevant and available information. Ensure the brief is aligned with strategic marketing objectives.
+      `;
+
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -71,8 +86,8 @@ El brief debe estar en español, ser claro y fácil de entender. Organiza la inf
     // 3. Iniciar transacción
     await pool.query('BEGIN');
 
-    // 4. Guardar el proyecto con el brief generado
-    const projectResult = await pool.query(
+    // 4. Guardar proyecto
+    await pool.query(
       `INSERT INTO projects (
         user_id, client_name, project_name, start_date, delivery_date, website,
         main_goal, secondary_goals, current_situation, challenges, target_audience,
@@ -87,7 +102,7 @@ El brief debe estar en español, ser claro y fácil de entender. Organiza la inf
         $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26,
         $27, $28, $29, $30
-      ) RETURNING *`,
+      )`,
       [
         userId,
         data.client_name, data.project_name, data.start_date, data.delivery_date, data.website,
@@ -101,7 +116,7 @@ El brief debe estar en español, ser claro y fácil de entender. Organiza la inf
       ]
     );
 
-    // 5. Descontar 1 brief al usuario
+    // 5. Descontar crédito
     await pool.query(
       'UPDATE users SET briefs_available = briefs_available - 1 WHERE id = $1',
       [userId]
@@ -110,8 +125,22 @@ El brief debe estar en español, ser claro y fácil de entender. Organiza la inf
     // 6. Confirmar transacción
     await pool.query('COMMIT');
 
-    // 7. Responder con proyecto creado
-    res.status(201).json(projectResult.rows[0]);
+    // 7. Generar y enviar PDF
+    const doc = new PDFDocument({ margin: 50 });
+    let buffers = [];
+
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', () => {
+      const pdfData = Buffer.concat(buffers);
+      res.setHeader('Content-Disposition', `attachment; filename="${data.project_name}_brief.pdf"`);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.send(pdfData);
+    });
+
+    doc.fontSize(20).text(`Brief del Proyecto: ${data.project_name}`, { align: 'center', underline: true });
+    doc.moveDown();
+    doc.fontSize(12).text(generatedBrief, { align: 'left' });
+    doc.end();
 
   } catch (err) {
     console.error('Error al crear proyecto:', err);
@@ -119,7 +148,6 @@ El brief debe estar en español, ser claro y fácil de entender. Organiza la inf
     res.status(500).json({ error: 'Error al guardar el proyecto' });
   }
 };
-
 
 // Obtener todos los proyectos
 exports.getAllProjects = async (_, res) => {

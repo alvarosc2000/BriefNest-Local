@@ -149,65 +149,77 @@ export default function ProjectBriefForm() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!userId) {
-      alert("Debes iniciar sesión para enviar el brief.");
-      return;
-    }
+  if (!userId) {
+    alert("Debes iniciar sesión para enviar el brief.");
+    return;
+  }
 
-    const payload = {
-      user_id: userId,
-      client_name: form.clientName,
-      project_name: form.projectName,
-      start_date: form.startDate,
-      delivery_date: form.deliveryDate,
-      website: form.website,
-      main_goal: form.mainGoal,
-      secondary_goals: form.secondaryGoals,
-      current_situation: form.currentSituation,
-      challenges: form.challenges,
-      target_audience: form.targetAudience,
-      audience_needs: form.audienceNeeds,
-      main_message: form.mainMessage,
-      differentiation: form.differentiation,
-      tone: form.tone,
-      channels: form.channels,
-      deliverable_formats: form.deliverableFormats,
-      expected_deliverables: form.expectedDeliverables,
-      limitations: form.limitations,
-      competitors: form.competitors,
-      reference_links: form.references,
-      budget: form.budget,
-      resources: form.resources,
-      milestones: form.milestones,
-      deadlines: form.deadlines,
-      restrictions: form.restrictions,
-      notes: form.notes,
-      branding_links: form.brandingLinks,
-      final_format: form.finalFormat,
-    };
-
-    try {
-      const response = await fetch("http://localhost:5000/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        alert("Brief enviado correctamente.");
-        localStorage.removeItem("briefmind_draft");
-        setForm(initialData);
-        setStep(0);
-      } else {
-        const err = await response.json();
-        alert(err.message || "Error al enviar el brief.");
-      }
-    } catch (error) {
-      alert("Error de conexión. Intenta de nuevo.");
-    }
+  const payload = {
+    user_id: userId,
+    client_name: form.clientName,
+    project_name: form.projectName,
+    start_date: form.startDate,
+    delivery_date: form.deliveryDate,
+    website: form.website,
+    main_goal: form.mainGoal,
+    secondary_goals: form.secondaryGoals,
+    current_situation: form.currentSituation,
+    challenges: form.challenges,
+    target_audience: form.targetAudience,
+    audience_needs: form.audienceNeeds,
+    main_message: form.mainMessage,
+    differentiation: form.differentiation,
+    tone: form.tone,
+    channels: form.channels,
+    deliverable_formats: form.deliverableFormats,
+    expected_deliverables: form.expectedDeliverables,
+    limitations: form.limitations,
+    competitors: form.competitors,
+    reference_links: form.references,
+    budget: form.budget,
+    resources: form.resources,
+    milestones: form.milestones,
+    deadlines: form.deadlines,
+    restrictions: form.restrictions,
+    notes: form.notes,
+    branding_links: form.brandingLinks,
+    final_format: form.finalFormat,
   };
+
+  try {
+    const response = await fetch("http://localhost:5000/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      // Espera el PDF como blob
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "briefmind.pdf"; // Nombre por defecto
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      alert("Brief enviado y PDF descargado.");
+      localStorage.removeItem("briefmind_draft");
+      setForm(initialData);
+      setStep(0);
+    } else {
+      const err = await response.json();
+      alert(err.message || "Error al enviar el brief.");
+    }
+  } catch (error) {
+    alert("Error de conexión. Intenta de nuevo.");
+  }
+};
+
 
   // Pasos del formulario
   const steps = [
