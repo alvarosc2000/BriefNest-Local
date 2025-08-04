@@ -1,7 +1,7 @@
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
-const db = require('../db'); // Asegúrate de tener esto apuntando a tu conexión a PostgreSQL
+const db = require('../db');
 
 const {
   createUser,
@@ -10,9 +10,10 @@ const {
   buyExtraBrief,
   getUserPlan,
   getUserById,
+  authenticateToken,
+  getUserPlanWithExpirationCheck,
   updateUserPlanAfterPayment,
-  updateUserBriefsAfterPayment,
-  authenticateToken
+  updateUserBriefsAfterPayment
 } = require('../controllers/userController');
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -22,7 +23,7 @@ router.post('/register', createUser);
 router.post('/login', loginUser);
 router.put('/:userId/plan', updateUserPlan);
 router.put('/:userId/buy-brief', authenticateToken, buyExtraBrief);
-router.get('/:userId/info-plan', getUserPlan);
+router.get('/:userId/info-plan', getUserPlanWithExpirationCheck);
 router.get('/:userId', getUserById);
 
 // Crear sesión de pago para comprar briefs extra
@@ -35,7 +36,6 @@ router.post('/:userId/briefs/checkout-session', authenticateToken, async (req, r
   }
 
   try {
-    // Obtener plan del usuario
     const result = await db.query(
       'SELECT subscription_plan FROM users WHERE id = $1',
       [userId]
@@ -46,15 +46,15 @@ router.post('/:userId/briefs/checkout-session', authenticateToken, async (req, r
     }
 
     const plan = result.rows[0].subscription_plan;
-
-    // Definir precios por plan
     const pricesByPlan = {
-      basic: 500,   // $5.00
-      premium: 300, // $3.00
-      pro: 100      // $1.00
+      básico: 700,
+      basic: 700,
+      pro: 500,
+      premium: 300,
+      equipo: 300
     };
 
-    const unitAmount = pricesByPlan[plan?.toLowerCase()] || 500;
+    const unitAmount = pricesByPlan[plan?.toLowerCase()] || 700;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -96,9 +96,11 @@ router.post('/:userId/plan/checkout-session', authenticateToken, async (req, res
 
   try {
     const pricesByPlan = {
+      básico: 1000,
       basic: 1000,
-      premium: 2000,
-      pro: 3000
+      premium: 8000,
+      pro: 3000,
+      equipo: 3000
     };
 
     const unitAmount = pricesByPlan[plan.toLowerCase()];
@@ -128,7 +130,7 @@ router.post('/:userId/plan/checkout-session', authenticateToken, async (req, res
       },
     });
 
-    return res.json({ sessionId: session.id });
+    return res.json({ checkoutUrl: session.url });
   } catch (err) {
     console.error('Error al crear sesión de checkout para plan:', err);
     return res.status(500).json({ error: 'Error al crear la sesión de pago' });
@@ -136,7 +138,7 @@ router.post('/:userId/plan/checkout-session', authenticateToken, async (req, res
 });
 
 // Webhook Stripe para detectar pago exitoso
-router.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -147,37 +149,27 @@ router.post('/webhook', express.raw({ type: 'application/json' }), (req, res) =>
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const { userId, plan, quantity, type } = session.metadata;
+  const session = event.data.object;
+  const { userId, plan, quantity, type } = session.metadata;
 
-    if (type === 'plan') {
-      updateUserPlanAfterPayment(userId, plan)
-        .then(() => {
-          console.log(`Plan actualizado para usuario ${userId} a ${plan} tras pago.`);
-          res.json({ received: true });
-        })
-        .catch((err) => {
-          console.error('Error actualizando plan después de pago:', err);
-          res.status(500).send('Error actualizando plan');
-        });
-    } else if (type === 'briefs') {
-      const qty = parseInt(quantity, 10) || 1;
-      updateUserBriefsAfterPayment(userId, qty)
-        .then(() => {
-          console.log(`Briefs actualizados para usuario ${userId}, cantidad ${qty} tras pago.`);
-          res.json({ received: true });
-        })
-        .catch((err) => {
-          console.error('Error actualizando briefs después de pago:', err);
-          res.status(500).send('Error actualizando briefs');
-        });
-    } else {
-      res.json({ received: true });
+  if (event.type === 'checkout.session.completed') {
+    try {
+      if (type === 'plan') {
+        await updateUserPlanAfterPayment(userId, plan);
+        console.log(`✅ Plan actualizado para usuario ${userId} a ${plan}`);
+      } else if (type === 'briefs') {
+        const qty = parseInt(quantity, 10) || 1;
+        await updateUserBriefsAfterPayment(userId, qty);
+        console.log(`✅ Briefs actualizados para usuario ${userId}: +${qty}`);
+      }
+      return res.json({ received: true });
+    } catch (err) {
+      console.error('❌ Error actualizando datos tras pago:', err);
+      return res.status(500).send('Error al procesar el pago');
     }
-  } else {
-    res.json({ received: true });
   }
+
+  res.json({ received: true });
 });
 
 module.exports = router;

@@ -41,9 +41,9 @@ class UserController {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const result = await db.query(
-        `INSERT INTO users (name, email, password, briefs_available, briefs_used, price_per_extra_brief, subscription_plan)
-         VALUES ($1, $2, $3, 0, 0, 0, '')
-         RETURNING id, name, email, briefs_available, briefs_used, price_per_extra_brief, subscription_plan`,
+        `INSERT INTO users (name, email, password, briefs_available, briefs_used, price_per_extra_brief, subscription_plan, subscription_renewal)
+         VALUES ($1, $2, $3, 0, 0, 0, '', NULL)
+         RETURNING id, name, email, briefs_available, briefs_used, price_per_extra_brief, subscription_plan, subscription_renewal`,
         [name, email, hashedPassword]
       );
 
@@ -144,13 +144,13 @@ class UserController {
       let briefs_available = 0;
       let price_per_extra_brief = 0;
 
-      if (plan === 'Básico') {
+      if (plan === 'basic') {
         briefs_available = 3;
         price_per_extra_brief = 7;
-      } else if (plan === 'Pro') {
+      } else if (plan === 'pro') {
         briefs_available = 10;
         price_per_extra_brief = 5;
-      } else if (plan === 'Equipo') {
+      } else if (plan === 'premium') {
         briefs_available = 30;
         price_per_extra_brief = 3;
       } else {
@@ -185,7 +185,6 @@ class UserController {
     }
   }
 
-  // Compra briefs extras: sumar briefs_available en base a quantity
   async buyExtraBrief(req, res) {
     const userId = req.user.id;
     const { quantity } = req.body;
@@ -193,7 +192,6 @@ class UserController {
     const briefsToAdd = parseInt(quantity, 10) || 1;
 
     try {
-      // Actualizar briefs_available sumando la cantidad comprada
       const result = await db.query(
         `UPDATE users
          SET briefs_available = briefs_available + $1
@@ -220,23 +218,7 @@ class UserController {
     }
   }
 
-  // Esta función se llama desde webhook para actualizar briefs tras pago Stripe
-  async updateUserBriefsAfterPayment(userId, quantity) {
-    try {
-      // Sumar la cantidad de briefs extras adquiridos
-      await db.query(
-        `UPDATE users
-         SET briefs_available = briefs_available + $1
-         WHERE id = $2`,
-        [quantity, userId]
-      );
-    } catch (err) {
-      console.error('Error al actualizar briefs tras pago:', err);
-      throw err;
-    }
-  }
-
-  // Esta función se llama desde webhook para actualizar plan tras pago Stripe
+  // Webhook Stripe: actualizar plan tras pago
   async updateUserPlanAfterPayment(userId, plan) {
     try {
       let briefs_available = 0;
@@ -258,11 +240,18 @@ class UserController {
         throw new Error('Plan no válido');
       }
 
+      const renewalDate = new Date();
+      renewalDate.setMonth(renewalDate.getMonth() + 1);
+
       await db.query(
         `UPDATE users
-         SET briefs_available = $1, briefs_used = 0, price_per_extra_brief = $2, subscription_plan = $3
-         WHERE id = $4`,
-        [briefs_available, price_per_extra_brief, plan, userId]
+         SET briefs_available = $1,
+             briefs_used = 0,
+             price_per_extra_brief = $2,
+             subscription_plan = $3,
+             subscription_renewal = $4
+         WHERE id = $5`,
+        [briefs_available, price_per_extra_brief, plan, renewalDate, userId]
       );
     } catch (err) {
       console.error('Error al actualizar plan tras pago:', err);
@@ -270,14 +259,28 @@ class UserController {
     }
   }
 
-  async getUserPlan(req, res) {
+  // Webhook Stripe: sumar briefs extras tras pago
+  async updateUserBriefsAfterPayment(userId, quantity) {
+    try {
+      await db.query(
+        `UPDATE users
+         SET briefs_available = briefs_available + $1
+         WHERE id = $2`,
+        [quantity, userId]
+      );
+    } catch (err) {
+      console.error('Error al actualizar briefs tras pago:', err);
+      throw err;
+    }
+  }
+
+  async getUserPlanWithExpirationCheck(req, res) {
     const { userId } = req.params;
 
     try {
       const result = await db.query(
-        `SELECT subscription_plan, briefs_available, briefs_used, price_per_extra_brief
-         FROM users
-         WHERE id = $1`,
+        `SELECT id, subscription_plan, subscription_renewal, briefs_available, briefs_used, price_per_extra_brief
+         FROM users WHERE id = $1`,
         [userId]
       );
 
@@ -286,19 +289,29 @@ class UserController {
       }
 
       const user = result.rows[0];
+      const today = new Date();
+      const renewalDate = user.subscription_renewal ? new Date(user.subscription_renewal) : null;
+
+      let needsPayment = false;
+
+      if (renewalDate && today > renewalDate) {
+        needsPayment = true;
+      }
+
       const briefsRemaining = user.briefs_available - user.briefs_used;
 
       res.status(200).json({
         subscription_plan: user.subscription_plan,
         briefs_available: user.briefs_available,
         briefs_used: user.briefs_used,
-        user_brief: briefsRemaining,
         price_per_extra_brief: user.price_per_extra_brief,
-        needsPayment: briefsRemaining <= 0,
+        user_brief: briefsRemaining,
+        subscription_renewal: user.subscription_renewal,
+        needsPayment,
       });
     } catch (err) {
-      console.error('Error al obtener plan del usuario:', err);
-      res.status(500).json({ message: 'Error al obtener plan del usuario' });
+      console.error('Error al verificar expiración del plan:', err);
+      res.status(500).json({ message: 'Error al verificar plan' });
     }
   }
 }

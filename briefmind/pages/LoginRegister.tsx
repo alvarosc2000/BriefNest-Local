@@ -62,10 +62,16 @@ export default function LoginRegister() {
         localStorage.setItem('user_brief', data.user.briefs_available.toString());
         localStorage.setItem('subscription_plan', data.user.subscription_plan);
 
-        if (data.user.needsPayment) {
+        // Lógica para redirigir según estado del plan y briefs
+        if (data.user.isExpired) {
+          // Plan expirado → debe pagar mes nuevo
           router.push('/Checkout');
-        } else {
+        } else if (data.user.briefsRemaining > 0) {
+          // Plan vigente y briefs disponibles → puede usar briefs
           router.push('/BriefForm');
+        } else {
+          // Plan vigente pero sin briefs → comprar briefs extra
+          router.push('/BuyBrief');
         }
       } else {
         const data = await registerUser(name, email, password);

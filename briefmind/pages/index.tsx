@@ -10,7 +10,7 @@ type Plan = {
 
 const plans: Plan[] = [
   {
-    name: "Básico",
+    name: "Basic",
     price: "$10 USD / mes",
     briefsIncluded: 3,
     pricePerExtraBrief: "$7 USD",
@@ -26,7 +26,7 @@ const plans: Plan[] = [
       "Para profesionales activos. Mismo formulario potente, exportación en PDF/Word y más briefs incluidos.",
   },
   {
-    name: "Equipo",
+    name: "Premium",
     price: "$80 USD / mes",
     briefsIncluded: 30,
     pricePerExtraBrief: "$3 USD",

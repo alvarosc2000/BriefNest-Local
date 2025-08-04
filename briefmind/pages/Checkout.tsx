@@ -15,22 +15,22 @@ type Plan = {
 
 const plans: Plan[] = [
   {
-    name: 'Básico',
-    price: '$10 - $15 USD / mes',
+    name: 'Basic',
+    price: '$10 / mes',
     briefsIncluded: 3,
     pricePerExtraBrief: '$7 USD',
     description: 'Ideal para freelancers principiantes.',
   },
   {
     name: 'Pro',
-    price: '$30 - $45 USD / mes',
+    price: '$30 USD / mes',
     briefsIncluded: 10,
     pricePerExtraBrief: '$5 USD',
     description: 'Para freelancers y consultores activos.',
   },
   {
-    name: 'Equipo',
-    price: '$80 - $100 USD / mes',
+    name: 'Premium',
+    price: '$80 USD / mes',
     briefsIncluded: 30,
     pricePerExtraBrief: '$3 USD',
     description: 'Para microagencias o equipos pequeños.',

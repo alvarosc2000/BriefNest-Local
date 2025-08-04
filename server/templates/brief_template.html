@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Guía Estratégica</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@600&display=swap');
+
+    :root {
+      --primary-color: #00473E;
+      --accent-color: #10B981;
+      --text-color: #1F2937;
+      --muted-color: #6B7280;
+      --bg-light: #F9FAFB;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: white;
+      margin: 60px;
+      color: var(--text-color);
+      line-height: 1.7;
+      font-size: 15.5px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .project-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 38px;
+      color: var(--primary-color);
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: var(--muted-color);
+    }
+
+    section {
+      margin-bottom: 60px;
+    }
+
+    h2 {
+      font-size: 24px;
+      color: var(--text-color);
+      border-left: 5px solid var(--accent-color);
+      padding-left: 14px;
+      margin-top: 50px;
+      margin-bottom: 18px;
+      font-weight: 700;
+    }
+
+    h3 {
+      font-size: 18px;
+      color: var(--primary-color);
+      font-weight: 600;
+      margin-top: 30px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin-bottom: 16px;
+    }
+
+    ul {
+      margin-left: 24px;
+      padding-left: 0;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    .highlight-box {
+      background-color: var(--bg-light);
+      border-left: 5px solid var(--accent-color);
+      padding: 16px 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+
+    .quote {
+      font-style: italic;
+      color: var(--muted-color);
+      border-left: 4px solid #D1D5DB;
+      padding-left: 15px;
+      margin: 20px 0;
+    }
+
+    .section-break {
+      border-top: 1px solid #E5E7EB;
+      margin: 60px 0;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 13px;
+      color: #9CA3AF;
+      margin-top: 80px;
+      border-top: 1px solid #E5E7EB;
+      padding-top: 20px;
+    }
+
+    .numbered h2::before {
+      counter-increment: section;
+      content: counter(section) ". ";
+      color: var(--accent-color);
+    }
+
+    .numbered {
+      counter-reset: section;
+    }
+
+    a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="project-title">{{projectName}}</div>
+    <div class="subtitle">Guía estratégica del proyecto — alineación creativa, comunicación y visión ejecutiva</div>
+  </header>
+
+  <main class="numbered">
+    <section>
+      {{{briefContent}}}
+    </section>
+  </main>
+
+  <div class="footer">
+    Generado automáticamente con <strong>BriefMind</strong><br />
+    <em>Inspirando ideas. Organizando estrategia.</em>
+  </div>
+</body>
+</html>

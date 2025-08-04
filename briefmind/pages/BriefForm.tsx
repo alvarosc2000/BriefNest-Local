@@ -1,4 +1,6 @@
+import Link from "next/link";
 import React, { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
 
 interface BriefFormData {
   clientName: string;
@@ -39,8 +41,23 @@ const channelsOptions = [
   "Google Ads",
   "LinkedIn",
   "Web",
+  "TikTok",          // para video viral
+  "WhatsApp",        // comunicación directa
+  "YouTube",         // canal de video largo
 ];
-const deliverablesOptions = ["Posts", "Videos", "Newsletters", "Infografías"];
+
+const deliverablesOptions = [
+  "Posts",
+  "Videos",
+  "Newsletters",
+  "Infografías",
+  "Stories",         // contenido temporal
+  "Reels / Shorts",  // videos cortos
+  "Carruseles",      // posts deslizables
+  "Blogs",           // contenido escrito largo
+  "Landing Pages"    // páginas de destino para campañas
+];
+
 
 const initialData: BriefFormData = {
   clientName: "",
@@ -221,6 +238,13 @@ export default function ProjectBriefForm() {
 };
 
 
+  const router = useRouter();
+
+   const handleLogout = () => {
+    localStorage.clear();
+    router.push('/Index');
+  };
+
   // Pasos del formulario
   const steps = [
     {
@@ -326,13 +350,6 @@ export default function ProjectBriefForm() {
             name="differentiation"
             value={form.differentiation}
             onChange={handleChange}
-          />
-          <Select
-            label="Tono"
-            name="tone"
-            value={form.tone}
-            onChange={handleChange}
-            options={tonesOptions}
           />
         </>
       ),
@@ -440,7 +457,31 @@ export default function ProjectBriefForm() {
   ];
 
   return (
+
+
+    
     <div className="min-h-screen bg-[#0F172A] p-4">
+
+        <nav className="w-full bg-[#1E293B] px-6 py-4 flex justify-between items-center border-b border-cyan-600">
+        <div className="text-cyan-400 font-bold text-xl cursor-pointer" onClick={() => router.push('/Index')}>
+          BriefMind
+        </div>
+
+        <div className="flex gap-6 text-sm md:text-base items-center">
+          <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
+          <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
+          <Link href="/BuyBrief" className="hover:text-cyan-300 transition font-semibold underline">Comprar Briefs</Link>
+          <Link href="/ChangePlan" className="hover:text-cyan-300 transition">Cambio de Plan</Link>
+          <Link href="/LoginRegister" className="hover:text-cyan-300 transition">Login</Link>
+
+          <button
+            onClick={handleLogout}
+            className="text-red-400 hover:text-red-500 font-semibold transition"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </nav>
       <header className="max-w-4xl mx-auto mt-16 mb-12 text-center text-white px-4">
         <h1 className="text-5xl font-extrabold mb-4 leading-tight">
           {userName ? `¡Bienvenido, ${userName}!` : "¡Hola! Comienza a crear tu brief"}

@@ -14,7 +14,6 @@ const Loader = () => (
   </div>
 );
 
-// ⚠️ Coloca aquí tu clave pública real de Stripe
 const stripePromise = loadStripe('pk_test_tu_clave_publica_de_stripe');
 
 export default function BuyBrief() {
@@ -121,12 +120,17 @@ export default function BuyBrief() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#0F172A] to-[#1a1f36] text-white">
       <nav className="w-full bg-[#1E293B] px-6 py-4 flex justify-between items-center border-b border-cyan-600">
-        <div className="text-cyan-400 font-bold text-xl">BriefMind</div>
+        <div className="text-cyan-400 font-bold text-xl cursor-pointer" onClick={() => router.push('/Index')}>
+          BriefMind
+        </div>
+
         <div className="flex gap-6 text-sm md:text-base items-center">
           <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
-          <Link href="/Checkout" className="hover:text-cyan-300 transition">Checkout</Link>
+          <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
+          <Link href="/BuyBrief" className="hover:text-cyan-300 transition font-semibold underline">Comprar Briefs</Link>
+          <Link href="/ChangePlan" className="hover:text-cyan-300 transition">Cambio de</Link>
           <Link href="/LoginRegister" className="hover:text-cyan-300 transition">Login</Link>
-          <Link href="/BriefForm" className="hover:text-cyan-300 transition">BriefForm</Link>
+
           <button
             onClick={handleLogout}
             className="text-red-400 hover:text-red-500 font-semibold transition"

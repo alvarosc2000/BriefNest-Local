@@ -1,79 +1,251 @@
 const pool = require('../db');
 const OpenAI = require('openai');
-const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+const puppeteer = require('puppeteer');
 
 // Configurar OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Crear proyecto con generación de brief y descarga automática del PDF
+// Función para generar PDF estilizado a partir de brief en Markdown usando plantilla HTML
+async function generateStyledPDF(projectName, markdownBrief, res) {
+  // Importar marked dinámicamente (para evitar problemas con ESM)
+  const marked = (await import('marked')).marked;
+
+  const templatePath = path.join(__dirname, '../templates/brief_template.html');
+  const htmlTemplate = fs.readFileSync(templatePath, 'utf8');
+
+  const briefContent = marked.parse(markdownBrief); // Markdown a HTML
+  const year = new Date().getFullYear();
+
+  const finalHtml = htmlTemplate
+    .replace('{{projectName}}', projectName)
+    .replace('{{{briefContent}}}', briefContent)
+    .replace('{{year}}', year);
+
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
+  await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
+
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '40px', bottom: '60px', left: '40px', right: '40px' },
+  });
+
+  await browser.close();
+
+  res.setHeader('Content-Disposition', `attachment; filename="${projectName}_brief.pdf"`);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.send(pdfBuffer);
+}
+
+// Crear nuevo proyecto y generar brief + PDF
 exports.createProject = async (req, res) => {
   const data = req.body;
   const userId = data.user_id;
 
   try {
-    // 1. Verificar usuario y briefs disponibles
+    // 1. Validar usuario y créditos disponibles
     const userResult = await pool.query('SELECT briefs_available FROM users WHERE id = $1', [userId]);
-
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
+    if (userResult.rows.length === 0) return res.status(404).json({ message: 'Usuario no encontrado' });
 
     const briefs = userResult.rows[0].briefs_available;
+    if (briefs <= 0) return res.status(403).json({ message: 'No tienes briefs disponibles' });
 
-    if (briefs <= 0) {
-      return res.status(403).json({ message: 'No tienes briefs disponibles' });
-    }
-
-    // 2. Prompt para la IA
+    // 2. Construir prompt para generación del brief en español
     const prompt = `
-      You are a senior marketing strategist and expert in writing professional creative briefs for agencies, creative teams, and digital marketing campaigns.
+      Eres estratega senior en marketing, comunicación y marca, con trayectoria en agencias de primer nivel. Has liderado reposicionamientos, campañas integradas, lanzamientos digitales y construcción de marcas premium, alineando visión de negocio, creatividad y ejecución con excelencia estratégica.
 
-      Using the information provided below, generate a complete and well-structured creative brief in **English** that is:
+      Tu tarea es redactar un **brief estratégico completo, profesional y accionable**, basado exclusivamente en la información provista más abajo. Este documento debe ser una **herramienta real de trabajo**, útil para dirección general, estrategia, creatividad, medios, diseño y contenido. Debe conectar visión y ejecución, alinear decisiones y ser capaz de activar una campaña integral con impacto real.
 
-      - Clear and easy to understand.
-      - Visually organized with **section titles**, **subtitles**, and **bullet points** where relevant.
-      - Suitable for use by marketing teams, designers, copywriters, or project managers.
-      - Structured to flow logically from general context to detailed deliverables.
-      - **Exclude any sections where data is missing or not provided**.
-      - The tone should be professional but friendly, and concise.
+      ---
 
-      Here is the input data:
+      🎯 LO QUE SE ESPERA DE TI
 
-      - Project Name: ${data.project_name}
-      - Client Name: ${data.client_name}
-      - Start Date: ${data.start_date}
-      - Delivery Date: ${data.delivery_date}
-      - Website / Social Media: ${data.website}
-      - Primary Objective: ${data.main_goal}
-      - Secondary Goals: ${data.secondary_goals}
-      - Current Situation: ${data.current_situation}
-      - Challenges: ${data.challenges}
-      - Target Audience: ${data.target_audience}
-      - Audience Needs: ${data.audience_needs}
-      - Main Message: ${data.main_message}
-      - Product/Service Differentiation: ${data.differentiation}
-      - Tone of Communication: ${data.tone}
-      - Distribution Channels: ${Array.isArray(data.channels) ? data.channels.join(", ") : data.channels}
-      - Deliverable Formats: ${Array.isArray(data.deliverable_formats) ? data.deliverable_formats.join(", ") : data.deliverable_formats}
-      - Expected Deliverables: ${data.expected_deliverables}
-      - Constraints or Limitations: ${data.limitations}
-      - Main Competitors: ${data.competitors}
-      - References or Inspirations: ${data.reference_links}
-      - Budget: ${data.budget}
-      - Available Resources: ${data.resources}
-      - Key Milestones and Deadlines: ${data.milestones}
-      - Final Deadlines: ${data.deadlines}
-      - Additional Restrictions: ${data.restrictions}
-      - Notes or Comments: ${data.notes}
-      - Branding / Visual Identity Links: ${data.branding_links}
-      - Required Final Format: ${data.final_format}
+      - **No resumes. Interpretas.**
+        Transforma datos en visión estratégica: detecta oportunidades, prioriza desafíos, traduce audiencias en comportamientos, y vincula objetivos con acciones claras.
 
-      Please format the output using markdown-style **titles**, and structure the content to be exported as a well-designed PDF brief.
+      - **Redacta con lógica, conexión y propósito.**
+        El documento debe fluir naturalmente: del contexto al desafío, del consumidor al insight, del posicionamiento a la ejecución táctica. Todo debe estar conectado.
 
-      Do not repeat empty or missing data. Include only relevant and available information. Ensure the brief is aligned with strategic marketing objectives.
+      - **No copies ni reformules literalmente.**
+        Reestructura los datos con jerarquía de pensamiento. Cada sección debe mostrar intención, entendimiento del negocio y pensamiento estratégico.
+
+      - **Evita relleno, adornos o frases genéricas.**
+        Usa lenguaje profesional, preciso y útil. Redacta como lo haría un consultor senior para una marca global.
+
+      - **Si falta información, omite esa sección con elegancia.**
+        No inventes ni completes con suposiciones. El documento debe ser limpio, serio y confiable.
+
+      - **Ponte en el lugar del consumidor.**
+        Detecta tensiones, aspiraciones y motivaciones. Conecta la marca con momentos reales de decisión del usuario.
+
+      - **Haz el brief operativamente útil.**
+        Relaciona entregables con objetivos y canales. Explica el rol de cada pieza en el funnel de conversión. Agrega KPIs si es posible.
+
+      ---
+
+      ✒️ ESTILO ESPERADO
+
+      - Tono ejecutivo con sensibilidad creativa  
+      - Lenguaje estratégico, claro, directo y sin adornos  
+      - Redacción orientada a toma de decisiones, no solo inspiración  
+      - Documento usable como hoja de ruta real
+
+      ---
+
+      🧠 COMPONENTES CRÍTICOS QUE DEBE INCLUIR EL BRIEF
+
+      El brief debe incluir, siempre que haya información disponible, los siguientes bloques estratégicos:
+
+      - **Insight del consumidor**  
+        Tensión emocional o verdad cultural que conecta a la audiencia con la marca. Debe justificar la narrativa de comunicación.
+
+      - **Concepto estratégico rector**  
+        Idea paraguas clara, memorable y funcional. Debe guiar storytelling, tono, estilo visual y concepto creativo.
+
+      - **Narrativa recomendada**  
+        Guía extendida sobre cómo contar la historia de marca: qué tono usar, qué palabras evitar, qué tipo de recursos visuales activar.
+
+      - **Matriz táctica de activación**  
+        Tabla que vincule:
+          - Objetivo → Canal → Formato → KPI → Mensaje o enfoque
+        Esto convierte el brief en una hoja de ruta para equipos creativos, de contenido y medios.
+
+      - **Función estratégica de cada entregable**  
+        Explica para qué sirve cada pieza (atraer, educar, convertir, fidelizar) y en qué etapa del funnel impacta.
+
+      - **Qué evitar**  
+        Elementos creativos, tonos, clichés o errores comunes que puedan debilitar el posicionamiento deseado.
+
+      - **Riesgos de ejecución**  
+        Alertas sobre posibles desviaciones, malos entendidos creativos o limitaciones operativas que deban vigilarse.
+
+      ---
+
+      🧩 ESTRUCTURA COMPLETA DEL BRIEF
+
+      #### Resumen ejecutivo  
+      Propósito, contexto, problema a resolver y visión de éxito.
+
+      #### Objetivo principal  
+      Meta estratégica central del proyecto.
+
+      #### Objetivos secundarios  
+      Metas tácticas o funcionales medibles que apoyan el objetivo principal.
+
+      #### Contexto / situación actual  
+      Diagnóstico del negocio, marca, categoría o entorno digital.
+
+      #### Desafíos a resolver  
+      Problemas críticos. ¿Qué se debe superar para lograr el objetivo?
+
+      #### Público objetivo  
+      Perfil completo: demográfico, cultural, actitudinal, digital. ¿Qué lo mueve?
+
+      #### Necesidades del público  
+      ¿Qué busca realmente del producto, la marca o la experiencia?
+
+      #### Insight del consumidor  
+      Tensión emocional o insight oculto que da base a la narrativa.
+
+      #### Concepto estratégico rector  
+      Idea guía que alinea la campaña a una promesa diferenciadora.
+
+      #### Narrativa creativa recomendada  
+      Tono, temas, tipo de lenguaje, estilo visual, enfoques sugeridos.
+
+      #### Propuesta de valor / diferenciación  
+      Qué hace única a la marca y por qué eso importa al consumidor.
+
+      #### Mensaje principal  
+      Frase que condensa la propuesta de valor y guía la comunicación.
+
+      #### Tono y estilo de comunicación  
+      Cómo debe sonar y proyectarse la marca. Qué evitar.
+
+      #### Qué evitar  
+      Tonos, ideas, clichés, estéticas o lenguajes a descartar por riesgos de percepción o incoherencia.
+
+      #### Canales de distribución  
+      Medios y plataformas sugeridas. Justificación táctica.
+
+      #### Entregables esperados  
+      Listado con función estratégica de cada pieza.
+
+      #### Matriz táctica de activación  
+      Tabla: Objetivo → Canal → Formato → KPI → Mensaje
+
+      #### Restricciones o limitaciones  
+      Presupuesto, regulaciones, límites técnicos, marco legal o editorial.
+
+      #### Competencia directa  
+      Principales rivales, qué hacen bien/mal, oportunidades de diferenciación.
+
+      #### Referencias / inspiraciones  
+      Marcas, campañas o estilos visuales relevantes como guía conceptual o estética.
+
+      #### Recursos disponibles  
+      Manual de marca, research, activos visuales, análisis previos, etc.
+
+      #### Riesgos de ejecución  
+      Errores frecuentes, omisiones o interpretaciones que deben evitarse.
+
+      #### Hitos y fechas clave  
+      Fechas de entregas, validaciones, revisiones parciales.
+
+      #### Fecha de entrega final  
+
+      #### Notas adicionales  
+      Recomendaciones internas, criterios de validación, sugerencias de coordinación.
+
+      ---
+
+      🚨 REQUISITO FINAL:
+
+      Redacta como si el brief fuera presentado ante la dirección ejecutiva de una marca premium.  
+      Debe leerse como un documento profesional, estratégico y perfectamente ejecutable.  
+      No debe cerrar con inspiración vacía, sino como una **hoja de ruta clara, operativa y útil para equipos creativos y de negocio**.
+
+
+      📦 INFORMACIÓN DEL PROYECTO (input del usuario):
+
+      - Nombre del proyecto: ${data.project_name}
+      - Cliente: ${data.client_name}
+      - Fecha de inicio: ${data.start_date}
+      - Fecha de entrega: ${data.delivery_date}
+      - Sitio web / redes sociales: ${data.website}
+      - Objetivo principal: ${data.main_goal}
+      - Objetivos secundarios: ${data.secondary_goals}
+      - Situación actual: ${data.current_situation}
+      - Desafíos: ${data.challenges}
+      - Público objetivo: ${data.target_audience}
+      - Necesidades del público: ${data.audience_needs}
+      - Insight del consumidor: ${data.consumer_insight}
+      - Concepto rector: ${data.brand_concept}
+      - Mensaje principal: ${data.main_message}
+      - Diferenciación: ${data.differentiation}
+      - Tono de comunicación: ${data.tone}
+      - Qué evitar: ${data.donts}
+      - Canales de distribución: ${Array.isArray(data.channels) ? data.channels.join(", ") : data.channels}
+      - Formatos requeridos: ${Array.isArray(data.deliverable_formats) ? data.deliverable_formats.join(", ") : data.deliverable_formats}
+      - Entregables esperados: ${data.expected_deliverables}
+      - Limitaciones: ${data.limitations}
+      - Competencia: ${data.competitors}
+      - Referencias: ${data.reference_links}
+      - Presupuesto: ${data.budget}
+      - Recursos disponibles: ${data.resources}
+      - Hitos clave: ${data.milestones}
+      - Fecha final: ${data.deadlines}
+      - Restricciones adicionales: ${data.restrictions}
+      - Notas: ${data.notes}
+      - Identidad visual: ${data.branding_links}
+      - Formato final requerido: ${data.final_format}
       `;
+
 
 
     const completion = await openai.chat.completions.create({
@@ -83,10 +255,9 @@ exports.createProject = async (req, res) => {
 
     const generatedBrief = completion.choices[0].message?.content ?? '';
 
-    // 3. Iniciar transacción
+    // 3. Guardar proyecto en BD dentro de transacción
     await pool.query('BEGIN');
 
-    // 4. Guardar proyecto
     await pool.query(
       `INSERT INTO projects (
         user_id, client_name, project_name, start_date, delivery_date, website,
@@ -116,31 +287,11 @@ exports.createProject = async (req, res) => {
       ]
     );
 
-    // 5. Descontar crédito
-    await pool.query(
-      'UPDATE users SET briefs_available = briefs_available - 1 WHERE id = $1',
-      [userId]
-    );
-
-    // 6. Confirmar transacción
+    await pool.query('UPDATE users SET briefs_available = briefs_available - 1 WHERE id = $1', [userId]);
     await pool.query('COMMIT');
 
-    // 7. Generar y enviar PDF
-    const doc = new PDFDocument({ margin: 50 });
-    let buffers = [];
-
-    doc.on('data', buffers.push.bind(buffers));
-    doc.on('end', () => {
-      const pdfData = Buffer.concat(buffers);
-      res.setHeader('Content-Disposition', `attachment; filename="${data.project_name}_brief.pdf"`);
-      res.setHeader('Content-Type', 'application/pdf');
-      res.send(pdfData);
-    });
-
-    doc.fontSize(20).text(`Brief del Proyecto: ${data.project_name}`, { align: 'center', underline: true });
-    doc.moveDown();
-    doc.fontSize(12).text(generatedBrief, { align: 'left' });
-    doc.end();
+    // 4. Generar PDF estilizado y enviarlo
+    await generateStyledPDF(data.project_name, generatedBrief, res);
 
   } catch (err) {
     console.error('Error al crear proyecto:', err);
@@ -148,6 +299,7 @@ exports.createProject = async (req, res) => {
     res.status(500).json({ error: 'Error al guardar el proyecto' });
   }
 };
+
 
 // Obtener todos los proyectos
 exports.getAllProjects = async (_, res) => {
