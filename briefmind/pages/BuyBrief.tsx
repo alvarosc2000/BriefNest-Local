@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaCheckCircle } from 'react-icons/fa';
+import { FaCheckCircle, FaSignOutAlt } from 'react-icons/fa';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 
@@ -14,7 +14,7 @@ const Loader = () => (
   </div>
 );
 
-const stripePromise = loadStripe('pk_test_tu_clave_publica_de_stripe');
+const stripePromise = loadStripe('pk_test_51Rt8hjBRmozeY5V28OlghjWReZVDJtSP2TfpIym9bOjucj4IXVSFBhd6SpHzkGl9tHLdCkkXO4TiwoYbbAELwHoQ00AaxTd3Ew');
 
 export default function BuyBrief() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -119,26 +119,20 @@ export default function BuyBrief() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#0F172A] to-[#1a1f36] text-white">
-      <nav className="w-full bg-[#1E293B] px-6 py-4 flex justify-between items-center border-b border-cyan-600">
-        <div className="text-cyan-400 font-bold text-xl cursor-pointer" onClick={() => router.push('/Index')}>
+            {/* Navbar */}
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-[#111827] border-b border-gray-700">
+        <div className="text-2xl font-bold text-blue-400 cursor-pointer" onClick={() => router.push('/Index')}>
           BriefMind
         </div>
-
-        <div className="flex gap-6 text-sm md:text-base items-center">
-          <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
-          <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
-          <Link href="/BuyBrief" className="hover:text-cyan-300 transition font-semibold underline">Comprar Briefs</Link>
-          <Link href="/ChangePlan" className="hover:text-cyan-300 transition">Cambio de</Link>
-          <Link href="/LoginRegister" className="hover:text-cyan-300 transition">Login</Link>
-
-          <button
-            onClick={handleLogout}
-            className="text-red-400 hover:text-red-500 font-semibold transition"
-          >
-            Cerrar sesión
+        <div className="flex gap-6 items-center">
+          <Link href="/" className="hover:text-blue-300 text-sm">Inicio</Link>
+          <Link href="/BriefForm" className="hover:text-blue-300 text-sm">Crear Brief</Link>
+          <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-500 text-sm">
+            <FaSignOutAlt /> Cerrar sesión
           </button>
         </div>
       </nav>
+
 
       <section className="py-16 px-6 md:px-20 lg:px-40 flex items-center justify-center">
         <div className="max-w-2xl w-full bg-[#1E293B] p-10 rounded-3xl shadow-2xl border border-cyan-500 transition-all duration-300">

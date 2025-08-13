@@ -1,6 +1,7 @@
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
+import { FaSignOutAlt } from "react-icons/fa";
 
 interface BriefFormData {
   clientName: string;
@@ -461,27 +462,22 @@ export default function ProjectBriefForm() {
 
     
     <div className="min-h-screen bg-[#0F172A] p-4">
-
-        <nav className="w-full bg-[#1E293B] px-6 py-4 flex justify-between items-center border-b border-cyan-600">
-        <div className="text-cyan-400 font-bold text-xl cursor-pointer" onClick={() => router.push('/Index')}>
+      {/* Navbar */}
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-[#111827] border-b border-gray-700">
+        <div className="text-2xl font-bold text-blue-400 cursor-pointer" onClick={() => router.push('/Index')}>
           BriefMind
         </div>
-
-        <div className="flex gap-6 text-sm md:text-base items-center">
-          <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
-          <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
-          <Link href="/BuyBrief" className="hover:text-cyan-300 transition font-semibold underline">Comprar Briefs</Link>
-          <Link href="/ChangePlan" className="hover:text-cyan-300 transition">Cambio de Plan</Link>
-          <Link href="/LoginRegister" className="hover:text-cyan-300 transition">Login</Link>
-
-          <button
-            onClick={handleLogout}
-            className="text-red-400 hover:text-red-500 font-semibold transition"
-          >
-            Cerrar sesión
+        <div className="flex gap-6 items-center">
+          <Link href="/" className="hover:text-blue-300 text-sm">Inicio</Link>
+          <Link href="/BriefForm" className="hover:text-blue-300 text-sm">Crear Brief</Link>
+          <Link href="/ChangePlan" className="hover:text-blue-300 text-sm">Cambiar Plan</Link>
+          <Link href="/BuyBrief" className="hover:text-blue-300 text-sm">Comprar Brief</Link>
+          <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-500 text-sm">
+            <FaSignOutAlt /> Cerrar sesión
           </button>
         </div>
       </nav>
+
       <header className="max-w-4xl mx-auto mt-16 mb-12 text-center text-white px-4">
         <h1 className="text-5xl font-extrabold mb-4 leading-tight">
           {userName ? `¡Bienvenido, ${userName}!` : "¡Hola! Comienza a crear tu brief"}

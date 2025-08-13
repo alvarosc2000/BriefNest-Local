@@ -20,6 +20,44 @@ function authenticateToken(req, res, next) {
   });
 }
 
+// Middleware para actualizar isExpired según subscription_renewal
+async function updateExpirationStatus(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const result = await db.query('SELECT subscription_renewal, isexpired FROM users WHERE id = $1', [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    const { subscription_renewal, isexpired } = result.rows[0];
+    const now = new Date();
+
+    if (subscription_renewal && new Date(subscription_renewal) < now) {
+      // Plan expirado
+      if (!isexpired) {
+        await db.query('UPDATE users SET isExpired = true WHERE id = $1', [userId]);
+        req.user.isExpired = true;
+      } else {
+        req.user.isExpired = true;
+      }
+    } else {
+      // Plan no expirado o sin fecha
+      if (isexpired) {
+        await db.query('UPDATE users SET isExpired = false WHERE id = $1', [userId]);
+        req.user.isExpired = false;
+      } else {
+        req.user.isExpired = false;
+      }
+    }
+
+    next();
+  } catch (err) {
+    console.error('Error al actualizar estado de expiración:', err);
+    return res.status(500).json({ message: 'Error al actualizar expiración del plan' });
+  }
+}
+
 class UserController {
   async createUser(req, res) {
     const { name, email, password } = req.body;
@@ -41,9 +79,9 @@ class UserController {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const result = await db.query(
-        `INSERT INTO users (name, email, password, briefs_available, briefs_used, price_per_extra_brief, subscription_plan, subscription_renewal)
-         VALUES ($1, $2, $3, 0, 0, 0, '', NULL)
-         RETURNING id, name, email, briefs_available, briefs_used, price_per_extra_brief, subscription_plan, subscription_renewal`,
+        `INSERT INTO users (name, email, password, briefs_available, briefs_used, price_per_extra_brief, subscription_plan, subscription_renewal, isExpired)
+         VALUES ($1, $2, $3, 0, 0, 0, '', NULL, false)
+         RETURNING id, name, email, briefs_available, briefs_used, price_per_extra_brief, subscription_plan, subscription_renewal, isExpired`,
         [name, email, hashedPassword]
       );
 
@@ -84,6 +122,21 @@ class UserController {
         return res.status(400).json({ message: 'Contraseña incorrecta' });
       }
 
+      // Actualizar estado expirado antes de responder
+      const now = new Date();
+      let isExpired = user.isexpired;
+      if (user.subscription_renewal && new Date(user.subscription_renewal) < now) {
+        if (!isExpired) {
+          await db.query('UPDATE users SET isExpired = true WHERE id = $1', [user.id]);
+          isExpired = true;
+        }
+      } else {
+        if (isExpired) {
+          await db.query('UPDATE users SET isExpired = false WHERE id = $1', [user.id]);
+          isExpired = false;
+        }
+      }
+
       const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
       const briefsRemaining = user.briefs_available - user.briefs_used;
 
@@ -95,9 +148,11 @@ class UserController {
           briefs_available: user.briefs_available,
           briefs_used: user.briefs_used,
           user_brief: briefsRemaining,
-          needsPayment: briefsRemaining <= 0,
+          needsPayment: briefsRemaining <= 0 || isExpired,
           subscription_plan: user.subscription_plan,
           price_per_extra_brief: user.price_per_extra_brief,
+          subscription_renewal: user.subscription_renewal,
+          isExpired,
         },
         token,
       });
@@ -119,6 +174,20 @@ class UserController {
 
       const user = result.rows[0];
       const briefsRemaining = user.briefs_available - user.briefs_used;
+      const now = new Date();
+      let isExpired = user.isexpired;
+
+      if (user.subscription_renewal && new Date(user.subscription_renewal) < now) {
+        if (!isExpired) {
+          await db.query('UPDATE users SET isExpired = true WHERE id = $1', [user.id]);
+          isExpired = true;
+        }
+      } else {
+        if (isExpired) {
+          await db.query('UPDATE users SET isExpired = false WHERE id = $1', [user.id]);
+          isExpired = false;
+        }
+      }
 
       res.status(200).json({
         id: user.id,
@@ -127,8 +196,10 @@ class UserController {
         briefs_available: user.briefs_available,
         briefs_used: user.briefs_used,
         user_brief: briefsRemaining,
-        needsPayment: briefsRemaining <= 0,
+        needsPayment: briefsRemaining <= 0 || isExpired,
         subscription_plan: user.subscription_plan,
+        subscription_renewal: user.subscription_renewal,
+        isExpired,
       });
     } catch (err) {
       console.error('Error al obtener usuario:', err);
@@ -143,26 +214,38 @@ class UserController {
     try {
       let briefs_available = 0;
       let price_per_extra_brief = 0;
-
+      let planName = '';
       if (plan === 'basic') {
         briefs_available = 3;
         price_per_extra_brief = 7;
+        planName = 'Básico';
       } else if (plan === 'pro') {
         briefs_available = 10;
         price_per_extra_brief = 5;
+        planName = 'Pro';
       } else if (plan === 'premium') {
         briefs_available = 30;
         price_per_extra_brief = 3;
+        planName = 'Equipo';
       } else {
         return res.status(400).json({ message: 'Plan no válido' });
       }
 
+      // Fecha renovación = 1 mes desde hoy
+      const renewalDate = new Date();
+      renewalDate.setMonth(renewalDate.getMonth() + 1);
+
       const result = await db.query(
         `UPDATE users
-         SET briefs_available = $1, briefs_used = 0, price_per_extra_brief = $2, subscription_plan = $3
-         WHERE id = $4
-         RETURNING id, name, briefs_available, briefs_used, price_per_extra_brief, subscription_plan`,
-        [briefs_available, price_per_extra_brief, plan, userId]
+         SET briefs_available = $1,
+             briefs_used = 0,
+             price_per_extra_brief = $2,
+             subscription_plan = $3,
+             subscription_renewal = $4,
+             isExpired = false
+         WHERE id = $5
+         RETURNING id, name, briefs_available, briefs_used, price_per_extra_brief, subscription_plan, subscription_renewal, isExpired`,
+        [briefs_available, price_per_extra_brief, planName, renewalDate, userId]
       );
 
       if (result.rows.length === 0) {
@@ -223,19 +306,20 @@ class UserController {
     try {
       let briefs_available = 0;
       let price_per_extra_brief = 0;
+      let planName = '';
 
       if (plan === 'Básico' || plan.toLowerCase() === 'basic') {
         briefs_available = 3;
         price_per_extra_brief = 7;
-        plan = 'Básico';
+        planName = 'Básico';
       } else if (plan === 'Pro' || plan.toLowerCase() === 'pro') {
         briefs_available = 10;
         price_per_extra_brief = 5;
-        plan = 'Pro';
+        planName = 'Pro';
       } else if (plan === 'Equipo' || plan.toLowerCase() === 'equipo') {
         briefs_available = 30;
         price_per_extra_brief = 3;
-        plan = 'Equipo';
+        planName = 'Equipo';
       } else {
         throw new Error('Plan no válido');
       }
@@ -249,9 +333,10 @@ class UserController {
              briefs_used = 0,
              price_per_extra_brief = $2,
              subscription_plan = $3,
-             subscription_renewal = $4
+             subscription_renewal = $4,
+             isExpired = false
          WHERE id = $5`,
-        [briefs_available, price_per_extra_brief, plan, renewalDate, userId]
+        [briefs_available, price_per_extra_brief, planName, renewalDate, userId]
       );
     } catch (err) {
       console.error('Error al actualizar plan tras pago:', err);
@@ -279,7 +364,7 @@ class UserController {
 
     try {
       const result = await db.query(
-        `SELECT id, subscription_plan, subscription_renewal, briefs_available, briefs_used, price_per_extra_brief
+        `SELECT id, subscription_plan, subscription_renewal, briefs_available, briefs_used, price_per_extra_brief, isExpired
          FROM users WHERE id = $1`,
         [userId]
       );
@@ -293,9 +378,19 @@ class UserController {
       const renewalDate = user.subscription_renewal ? new Date(user.subscription_renewal) : null;
 
       let needsPayment = false;
+      let isExpired = user.isexpired;
 
       if (renewalDate && today > renewalDate) {
         needsPayment = true;
+        if (!isExpired) {
+          await db.query('UPDATE users SET isExpired = true WHERE id = $1', [user.id]);
+          isExpired = true;
+        }
+      } else {
+        if (isExpired) {
+          await db.query('UPDATE users SET isExpired = false WHERE id = $1', [user.id]);
+          isExpired = false;
+        }
       }
 
       const briefsRemaining = user.briefs_available - user.briefs_used;
@@ -308,6 +403,7 @@ class UserController {
         user_brief: briefsRemaining,
         subscription_renewal: user.subscription_renewal,
         needsPayment,
+        isExpired,
       });
     } catch (err) {
       console.error('Error al verificar expiración del plan:', err);
@@ -318,3 +414,4 @@ class UserController {
 
 module.exports = new UserController();
 module.exports.authenticateToken = authenticateToken;
+module.exports.updateExpirationStatus = updateExpirationStatus;

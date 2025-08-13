@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import Link from 'next/link';
 
-const stripePromise = loadStripe('pk_test_tu_clave_publica_de_stripe');
+const stripePromise = loadStripe('pk_test_51Rt8hjBRmozeY5V28OlghjWReZVDJtSP2TfpIym9bOjucj4IXVSFBhd6SpHzkGl9tHLdCkkXO4TiwoYbbAELwHoQ00AaxTd3Ew');
 
 const plans = [
   { name: 'Basic', price: 10, briefs: 3 },

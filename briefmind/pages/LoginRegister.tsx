@@ -62,25 +62,29 @@ export default function LoginRegister() {
         localStorage.setItem('user_brief', data.user.briefs_available.toString());
         localStorage.setItem('subscription_plan', data.user.subscription_plan);
 
-        // Lógica para redirigir según estado del plan y briefs
-        if (data.user.isExpired) {
-          // Plan expirado → debe pagar mes nuevo
-          router.push('/Checkout');
-        } else if (data.user.briefsRemaining > 0) {
-          // Plan vigente y briefs disponibles → puede usar briefs
-          router.push('/BriefForm');
-        } else {
-          // Plan vigente pero sin briefs → comprar briefs extra
-          router.push('/BuyBrief');
+        // Lógica de redirección según suscripción
+        if (data.user.isExpired == 'true') {
+          router.push('/ChangePlan'); // Suscripción vencida
+        } else if (data.user.briefs_available > 0) {
+          router.push('/BriefForm');  // Tiene briefs disponibles
+        } else if (data.user.subscription_plan == ""){
+          router.push('/Checkout');  // No ha comprado el plan
+        }else {
+          router.push('/BuyBrief');   // Sin briefs → comprar briefs extra
         }
+
       } else {
         const data = await registerUser(name, email, password);
-        setMessage('Usuario registrado con éxito. Ahora puedes iniciar sesión.');
-        setIsLogin(true);
-        setName('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
+
+        // Guardar token y datos en localStorage tras registro
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user_id', data.user.id.toString());
+        localStorage.setItem('user_name', data.user.name);
+        localStorage.setItem('user_brief', data.user.briefs_available.toString());
+        localStorage.setItem('subscription_plan', data.user.subscription_plan);
+
+        setMessage('Usuario registrado con éxito.');
+        router.push('/Checkout');  // Directo a compra de plan
       }
     } catch (err: any) {
       setError(err.message);
@@ -191,6 +195,16 @@ export default function LoginRegister() {
 
         .animate-fadeIn {
           animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes gradientMove {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        .animate-gradient-x {
+          animation: gradientMove 15s ease infinite;
         }
       `}</style>
     </main>
