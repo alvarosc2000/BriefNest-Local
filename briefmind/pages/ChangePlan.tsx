@@ -1,23 +1,58 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import Link from 'next/link';
+import { FaCheck, FaCrown } from 'react-icons/fa';
 
 const stripePromise = loadStripe('pk_test_51Rt8hjBRmozeY5V28OlghjWReZVDJtSP2TfpIym9bOjucj4IXVSFBhd6SpHzkGl9tHLdCkkXO4TiwoYbbAELwHoQ00AaxTd3Ew');
 
-const plans = [
-  { name: 'Basic', price: 10, briefs: 3 },
-  { name: 'Premium', price: 80, briefs: 30 },
-  { name: 'Pro', price: 30, briefs: 10 },
+type Plan = {
+  name: 'Basic' | 'Pro' | 'Premium';
+  price: number;
+  briefs: number;
+  extraPrice: number;
+  features: string[];
+  accent: string;
+  popular?: boolean;
+};
+
+const plans: Plan[] = [
+  {
+    name: 'Basic',
+    price: 10,
+    briefs: 3,
+    extraPrice: 7,
+    features: ['Formulario inteligente de briefs', 'Exportación en PDF', 'Historial básico'],
+    accent: 'from-cyan-500/20',
+  },
+  {
+    name: 'Pro',
+    price: 30,
+    briefs: 10,
+    extraPrice: 5,
+    features: ['Todo lo de Basic', 'Plantillas reutilizables', 'Colaboración sencilla'],
+    accent: 'from-blue-500/20',
+    popular: true,
+  },
+  {
+    name: 'Premium',
+    price: 80,
+    briefs: 30,
+    extraPrice: 3,
+    features: ['Todo lo de Pro', 'Espacios de equipo', 'Soporte prioritario'],
+    accent: 'from-purple-500/20',
+  },
 ];
 
-export default function ChangePlan() {
-  const [userPlan, setUserPlan] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('');
+export default function BuyBrief() {
+  const [userPlan, setUserPlan] = useState<Plan['name'] | ''>('');
+  const [selectedPlan, setSelectedPlan] = useState<Plan['name'] | ''>('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -28,52 +63,58 @@ export default function ChangePlan() {
       setIsAuthenticated(false);
       return;
     }
-
     setIsAuthenticated(true);
 
     fetch(`http://localhost:5000/api/users/${userId}/info-plan`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
-      .then((data) => {
-        setUserPlan(data.subscription_plan);
+      .then(async (res) => {
+        if (!res.ok) throw new Error('No autorizado');
+        return res.json();
       })
-      .catch(() => {
-        setIsAuthenticated(false);
-      });
+      .then((data) => {
+        const planName = (String(data.subscription_plan || '') as Plan['name']) || '';
+        setUserPlan(planName);
+      })
+      .catch(() => setIsAuthenticated(false));
   }, []);
 
-  const handleChangePlan = async () => {
+  const selectedPlanObj = useMemo(
+    () => plans.find((p) => p.name.toLowerCase() === selectedPlan.toLowerCase()),
+    [selectedPlan]
+  );
+
+  const handleBuyBriefs = async () => {
+    setErrorMsg(null);
     const token = localStorage.getItem('token');
     const userId = localStorage.getItem('user_id');
 
     if (!selectedPlan || !token || !userId) {
-      alert('Selecciona un plan válido.');
+      setErrorMsg('Selecciona un plan válido.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${userId}/plan/checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ plan: selectedPlan }),
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/users/${userId}/plan/checkout-session`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ plan: selectedPlan }),
+        }
+      );
 
       const data = await res.json();
-      if (!res.ok || !data.checkoutUrl) throw new Error(data.error || 'Error al crear la sesión');
-
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe no se cargó');
+      if (!res.ok || !data.checkoutUrl)
+        throw new Error(data.error || 'Error al crear la sesión');
 
       window.location.href = data.checkoutUrl;
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      setErrorMsg(err?.message || 'No se pudo iniciar la compra.');
     } finally {
       setLoading(false);
     }
@@ -87,61 +128,144 @@ export default function ChangePlan() {
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen bg-[#0F172A] text-white flex items-center justify-center">
-        <h1 className="text-2xl font-semibold">Cargando usuario...</h1>
+        <h1 className="text-2xl font-semibold animate-pulse">Cargando usuario...</h1>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#0F172A] to-[#1a1f36] text-white">
-      <nav className="w-full bg-[#1E293B] px-6 py-4 flex justify-between items-center border-b border-cyan-600">
-        <div className="text-cyan-400 font-bold text-xl">BriefMind</div>
-        <div className="flex gap-6 text-sm md:text-base items-center">
-          <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
-          <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar Briefs</Link>
-          <Link href="/BriefForm" className="hover:text-cyan-300 transition">BriefForm</Link>
-          <button onClick={handleLogout} className="text-red-400 hover:text-red-500 font-semibold transition">
-            Cerrar sesión
+    <main className="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#111a2d] to-[#1a1f36] text-white">
+      {/* Navbar */}
+      <nav className="sticky top-0 z-50 w-full bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10 px-6 py-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <button
+            onClick={() => router.push('/Index')}
+            className="text-xl md:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
+          >
+            BriefMind
           </button>
+          <div className="flex gap-6 items-center text-sm md:text-base">
+            <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
+            <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar Briefs</Link>
+            <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
+            <button onClick={handleLogout} className="text-red-400 hover:text-red-500 font-semibold transition">
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </nav>
 
-      <section className="py-16 px-6 md:px-20 lg:px-40 flex items-center justify-center">
-        <div className="max-w-3xl w-full bg-[#1E293B] p-10 rounded-3xl shadow-2xl border border-cyan-500">
-          <h1 className="text-4xl font-extrabold text-center mb-4 text-cyan-300">
-            Cambiar Plan
-          </h1>
-          <p className="text-center mb-8 text-gray-300">
-            Tu plan actual es: <span className="font-bold text-cyan-400">{userPlan}</span>
+      {/* Header */}
+      <header className="px-6 pt-10 md:pt-16">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-3">Comprar Briefs</h1>
+          <p className="text-gray-300 mb-8">
+            Plan actual:{' '}
+            <span className="font-bold text-cyan-400">{userPlan || '—'}</span>
           </p>
+        </div>
+      </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {plans.map((plan) => (
-              <div
+      {/* Plans */}
+      <section className="px-6 pb-28 md:pb-36">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          {plans.map((plan) => {
+            const isSelected = selectedPlan.toLowerCase() === plan.name.toLowerCase();
+            const pricePerBrief = plan.price / plan.briefs;
+
+            return (
+              <button
                 key={plan.name}
-                onClick={() => setSelectedPlan(plan.name.toLowerCase())}
-                className={`cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 ${
-                  selectedPlan === plan.name.toLowerCase()
-                    ? 'border-cyan-400 bg-gray-800'
-                    : 'border-gray-600 bg-gray-900 hover:border-cyan-700'
-                }`}
+                onClick={() => setSelectedPlan(plan.name)}
+                className={`group relative rounded-3xl p-7 text-left transition-all duration-300 border
+                  ${isSelected ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-white/10 hover:border-cyan-400/60'}
+                  bg-gradient-to-br ${plan.accent} to-transparent
+                  hover:translate-y-[-2px] hover:shadow-xl`}
               >
-                <h2 className="text-2xl font-bold mb-2 text-cyan-300">{plan.name}</h2>
-                <p className="text-gray-400 mb-1">Precio: ${plan.price} USD</p>
-                <p className="text-gray-400">Briefs incluidos: {plan.briefs}</p>
-              </div>
-            ))}
-          </div>
+                {plan.popular && (
+                  <div className="absolute -top-3 right-4 flex items-center gap-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full shadow">
+                    <FaCrown /> Popular
+                  </div>
+                )}
 
-          <button
-            onClick={handleChangePlan}
-            disabled={loading || !selectedPlan}
-            className="w-full bg-cyan-500 hover:bg-cyan-600 text-gray-900 px-6 py-3 rounded-lg text-lg font-bold disabled:opacity-50 transition-all shadow-lg"
-          >
-            {loading ? 'Redirigiendo...' : `Cambiar a ${selectedPlan || '...'} plan`}
-          </button>
+                <h3 className="text-2xl font-extrabold mb-2">{plan.name}</h3>
+                <div className="flex items-end gap-2 mb-4">
+                  <span className="text-4xl font-extrabold">${plan.price}</span>
+                  <span className="text-gray-400 mb-1">/ mes</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                  <span className="text-xs bg-white/10 text-white/90 px-3 py-1 rounded-full">{plan.briefs} briefs incluidos</span>
+                  <span className="text-xs bg-white/10 text-white/80 px-3 py-1 rounded-full">Extra ${plan.extraPrice}/brief</span>
+                  <span className="text-xs bg-white/10 text-white/70 px-3 py-1 rounded-full">~${pricePerBrief.toFixed(2)}/brief</span>
+                </div>
+
+                <ul className="space-y-2">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-gray-200">
+                      <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-300">
+                        <FaCheck className="h-3.5 w-3.5" />
+                      </span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className={`mt-6 text-sm font-semibold transition ${isSelected ? 'text-cyan-300' : 'text-gray-400 group-hover:text-cyan-200'}`}>
+                  {isSelected ? 'Plan seleccionado' : 'Haz clic para seleccionar'}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </section>
+
+      {/* Sticky Summary Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40">
+        <div className="mx-auto max-w-6xl px-6 pb-6">
+          <div className={`rounded-2xl border ${selectedPlan ? 'border-cyan-500' : 'border-white/10'} bg-[#0b1426]/95 backdrop-blur-md shadow-2xl px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4`}>
+            <div className="flex-1">
+              <div className="text-sm text-gray-400">Plan seleccionado</div>
+              <div className="text-xl font-bold">
+                {selectedPlanObj ? `${selectedPlanObj.name} — $${selectedPlanObj.price}/mes` : '—'}
+              </div>
+              {selectedPlanObj && (
+                <div className="text-sm text-gray-300">
+                  {selectedPlanObj.briefs} briefs/mes · Extra ${selectedPlanObj.extraPrice}/brief · ~${(selectedPlanObj.price / selectedPlanObj.briefs).toFixed(2)}/brief
+                </div>
+              )}
+              {errorMsg && <div className="mt-2 text-sm text-red-400">{errorMsg}</div>}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSelectedPlan('')}
+                className="px-5 py-3 rounded-xl border border-white/15 text-white/90 hover:bg-white/5 transition"
+              >
+                Limpiar
+              </button>
+              <button
+                onClick={handleBuyBriefs}
+                className={`px-6 py-3 rounded-xl font-bold transition shadow-lg
+                  ${!selectedPlan ? 'bg-gray-700 text-white/70 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-400 to-blue-500 text-gray-900 hover:from-blue-500 hover:to-cyan-400'}`}
+              >
+                {loading ? 'Redirigiendo…' : 'Comprar Briefs'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
+  );
+}
+
+/** ---------- Subcomponentes ---------- **/
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat-card rounded-2xl border border-white/10 bg-white/5 px-6 py-5 shadow-lg">
+      <div className="text-xs uppercase tracking-wide text-gray-400">{label}</div>
+      <div className="text-2xl font-extrabold mt-1">{value}</div>
+    </div>
   );
 }

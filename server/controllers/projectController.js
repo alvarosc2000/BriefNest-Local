@@ -209,6 +209,12 @@ exports.createProject = async (req, res) => {
       Redacta como si el brief fuera presentado ante la dirección ejecutiva de una marca premium.  
       Debe leerse como un documento profesional, estratégico y perfectamente ejecutable.  
       No debe cerrar con inspiración vacía, sino como una **hoja de ruta clara, operativa y útil para equipos creativos y de negocio**.
+      Extiende y contextualiza cada sección disponible.
+      Si el input contiene puntos breves o superficiales, amplíalos con contexto, conexiones estratégicas y explicación de relevancia para el proyecto. No inventes datos, pero desarrolla la lógica, las implicaciones y el uso práctico de esa información.
+      Enriquece con capas de análisis.
+      Explica por qué cada punto es importante para la marca y cómo debe guiar la ejecución. Incluye ejemplos o escenarios de aplicación si es relevante para un equipo creativo.
+      Transforma frases sueltas en bloques accionables.
+      Si el input tiene frases cortas, conviértelas en párrafos con valor estratégico, que conecten con los objetivos, el público y los canales.
 
 
       📦 INFORMACIÓN DEL PROYECTO (input del usuario):

@@ -272,28 +272,42 @@ class UserController {
     const userId = req.user.id;
     const { quantity } = req.body;
 
-    const briefsToAdd = parseInt(quantity, 10) || 1;
-
     try {
-      const result = await db.query(
-        `UPDATE users
-         SET briefs_available = briefs_available + $1
-         WHERE id = $2
-         RETURNING briefs_available, briefs_used`,
-        [briefsToAdd, userId]
+      // Verificar estado del plan antes de permitir comprar briefs
+      const userResult = await db.query(
+        'SELECT briefs_available, briefs_used, isexpired FROM users WHERE id = $1',
+        [userId]
       );
 
-      if (result.rows.length === 0) {
+      if (userResult.rows.length === 0) {
         return res.status(404).json({ message: 'Usuario no encontrado' });
       }
 
-      const user = result.rows[0];
+      const user = userResult.rows[0];
+
+      if (user.isexpired) {
+        return res.status(403).json({ 
+          message: 'No puedes comprar briefs: tu plan ha expirado. Renueva tu suscripción.' 
+        });
+      }
+
+      const briefsToAdd = parseInt(quantity, 10) || 1;
+
+      const result = await db.query(
+        `UPDATE users
+        SET briefs_available = briefs_available + $1
+        WHERE id = $2
+        RETURNING briefs_available, briefs_used`,
+        [briefsToAdd, userId]
+      );
+
+      const updatedUser = result.rows[0];
 
       res.status(200).json({
         message: `Se compraron ${briefsToAdd} briefs extra`,
-        briefs_available: user.briefs_available,
-        briefs_used: user.briefs_used,
-        user_brief: user.briefs_available - user.briefs_used,
+        briefs_available: updatedUser.briefs_available,
+        briefs_used: updatedUser.briefs_used,
+        user_brief: updatedUser.briefs_available - updatedUser.briefs_used,
       });
     } catch (err) {
       console.error('Error al comprar briefs extra:', err);

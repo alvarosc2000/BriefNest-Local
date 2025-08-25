@@ -1,288 +1,277 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { FaCheckCircle, FaChevronRight } from 'react-icons/fa';
+import React, { Component } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { FaCheck, FaCrown } from 'react-icons/fa';
+import { withRouter } from 'next/router';
 import Link from 'next/link';
 
+const stripePromise = loadStripe('pk_test_51Rt8hjBRmozeY5V28OlghjWReZVDJtSP2TfpIym9bOjucj4IXVSFBhd6SpHzkGl9tHLdCkkXO4TiwoYbbAELwHoQ00AaxTd3Ew');
+
 type Plan = {
-  name: string;
-  price: string;
-  briefsIncluded: number;
-  pricePerExtraBrief: string;
-  description: string;
+  name: 'Basic' | 'Pro' | 'Premium';
+  price: number;
+  briefs: number;
+  extraPrice: number;
+  features: string[];
+  accent: string;
+  popular?: boolean;
 };
 
 const plans: Plan[] = [
   {
     name: 'Basic',
-    price: '$10 / mes',
-    briefsIncluded: 3,
-    pricePerExtraBrief: '$7 USD',
-    description: 'Ideal para freelancers principiantes.',
+    price: 10,
+    briefs: 3,
+    extraPrice: 7,
+    features: ['Formulario inteligente de briefs', 'Exportación en PDF', 'Historial básico'],
+    accent: 'from-cyan-500/20',
   },
   {
     name: 'Pro',
-    price: '$30 USD / mes',
-    briefsIncluded: 10,
-    pricePerExtraBrief: '$5 USD',
-    description: 'Para freelancers y consultores activos.',
+    price: 30,
+    briefs: 10,
+    extraPrice: 5,
+    features: ['Todo lo de Basic', 'Plantillas reutilizables', 'Colaboración sencilla'],
+    accent: 'from-blue-500/20',
+    popular: true,
   },
   {
     name: 'Premium',
-    price: '$80 USD / mes',
-    briefsIncluded: 30,
-    pricePerExtraBrief: '$3 USD',
-    description: 'Para microagencias o equipos pequeños.',
+    price: 80,
+    briefs: 30,
+    extraPrice: 3,
+    features: ['Todo lo de Pro', 'Espacios de equipo', 'Soporte prioritario'],
+    accent: 'from-purple-500/20',
   },
 ];
 
-const Loader = () => (
-  <div className="flex justify-center items-center space-x-2">
-    <div className="w-3 h-3 rounded-full bg-cyan-400 animate-bounce" />
-    <div className="w-3 h-3 rounded-full bg-cyan-400 animate-bounce delay-200" />
-    <div className="w-3 h-3 rounded-full bg-cyan-400 animate-bounce delay-400" />
-  </div>
-);
+interface BuyBriefState {
+  userPlan: Plan['name'] | '';
+  selectedPlan: Plan['name'] | '';
+  isAuthenticated: boolean;
+  loading: boolean;
+  errorMsg: string | null;
+}
 
-const PlanCard = ({
-  plan,
-  selected,
-  onSelect,
-}: {
-  plan: Plan;
-  selected: boolean;
-  onSelect: () => void;
-}) => (
-  <button
-    onClick={onSelect}
-    aria-pressed={selected}
-    className={`group relative w-full p-6 rounded-xl shadow-lg transition border-2 duration-200
-      ${
-        selected
-          ? 'border-cyan-500 bg-cyan-900 shadow-cyan-500/40'
-          : 'border-slate-700 bg-slate-800 hover:border-cyan-400 hover:shadow-cyan-400/30'
-      } flex flex-col cursor-pointer`}
-  >
-    <h3 className="text-2xl font-bold mb-2 group-hover:text-cyan-300">{plan.name}</h3>
-    <p className="text-cyan-300 font-semibold mb-1">{plan.price}</p>
-    <p className="mb-2 text-white/80">Briefs incluidos: {plan.briefsIncluded}</p>
-    <p className="text-sm text-gray-300 mb-3 flex-1">{plan.description}</p>
-    <p className="text-sm text-gray-400">
-      Precio briefs extra: <span className="font-semibold">{plan.pricePerExtraBrief}</span>
-    </p>
-    {selected && (
-      <FaCheckCircle
-        className="absolute top-4 right-4 text-cyan-400"
-        size={24}
-        aria-label="Plan seleccionado"
-      />
-    )}
-  </button>
-);
+class BuyBrief extends Component<any, BuyBriefState> {
+  constructor(props: any) {
+    super(props);
+    this.state = {
+      userPlan: '',
+      selectedPlan: '',
+      isAuthenticated: false,
+      loading: false,
+      errorMsg: null,
+    };
+  }
 
-export default function Checkout() {
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); // null = cargando
-  const [userBriefs, setUserBriefs] = useState(0);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('user_id');
-    const storedName = localStorage.getItem('user_name');
-
-    if (storedName) setUserName(storedName);
-
-    if (token && userId) {
-      fetch(`http://localhost:5000/api/users/${userId}/info-plan`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(res => {
-          if (!res.ok) throw new Error('No se pudo obtener el plan.');
-          return res.json();
-        })
-        .then(data => {
-          const briefsLeft = data.briefs_available - data.briefs_used;
-          setUserBriefs(briefsLeft);
-          setIsAuthenticated(true);
-          if (briefsLeft > 0) router.push('/BriefForm');
-        })
-        .catch(err => {
-          console.error(err);
-          setIsAuthenticated(false);
-        });
-    } else {
-      setIsAuthenticated(false);
-    }
-  }, [router]);
-
-  const handlePlanSelection = async () => {
-    if (!selectedPlan) return;
-
+  componentDidMount() {
     const token = localStorage.getItem('token');
     const userId = localStorage.getItem('user_id');
 
     if (!token || !userId) {
-      alert('No se pudo validar tu sesión. Vuelve a iniciar sesión.');
+      this.setState({ isAuthenticated: false });
       return;
     }
 
-    setLoading(true);
+    this.setState({ isAuthenticated: true });
 
+    fetch(`http://localhost:5000/api/users/${userId}/info-plan`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('No autorizado');
+        return res.json();
+      })
+      .then((data) => {
+        const planName = (String(data.subscription_plan || '') as Plan['name']) || '';
+        this.setState({ userPlan: planName });
+      })
+      .catch(() => this.setState({ isAuthenticated: false }));
+  }
+
+  handleBuyBriefs = async () => {
+    const { selectedPlan } = this.state;
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('user_id');
+
+    if (!selectedPlan || !token || !userId) {
+      this.setState({ errorMsg: 'Selecciona un plan válido.' });
+      return;
+    }
+
+    this.setState({ loading: true, errorMsg: null });
     try {
       const res = await fetch(`http://localhost:5000/api/users/${userId}/plan/checkout-session`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ plan: selectedPlan.name }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: selectedPlan }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
-      }
-
       const data = await res.json();
+      if (!res.ok || !data.checkoutUrl) throw new Error(data.error || 'Error al crear la sesión');
+
       window.location.href = data.checkoutUrl;
-    } catch (error: any) {
-      console.error(error);
-      alert('Error al iniciar el pago: ' + error.message);
+    } catch (err: any) {
+      this.setState({ errorMsg: err?.message || 'No se pudo iniciar la compra.' });
     } finally {
-      setLoading(false);
-      setShowConfirm(false);
+      this.setState({ loading: false });
     }
   };
 
-  const handleLogout = () => {
+  handleLogout = () => {
     localStorage.clear();
-    router.push('/Index');
+    this.props.router.push('/LoginRegister');
   };
 
-  if (isAuthenticated === null) {
+  render() {
+    const { isAuthenticated, userPlan, selectedPlan, loading, errorMsg } = this.state;
+
+    if (!isAuthenticated) {
+      return (
+        <main className="min-h-screen bg-[#0F172A] text-white flex items-center justify-center">
+          <h1 className="text-2xl font-semibold animate-pulse">Cargando usuario...</h1>
+        </main>
+      );
+    }
+
+    const selectedPlanObj = plans.find((p) => p.name.toLowerCase() === selectedPlan.toLowerCase());
+
     return (
-      <main className="min-h-screen bg-[#0F172A] text-white flex items-center justify-center">
-        <Loader />
-      </main>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <main className="min-h-screen bg-[#0F172A] text-white flex items-center justify-center text-center p-8">
-        <div>
-          <h2 className="text-2xl font-bold mb-4">No estás autenticado</h2>
-          <Link
-            href="/LoginRegister"
-            className="text-cyan-400 underline hover:text-cyan-300"
-          >
-            Ir a iniciar sesión
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="min-h-screen bg-[#0F172A] text-white font-sans pb-16">
-      {/* NAVBAR */}
-      <nav className="w-full bg-[#1E293B] px-6 py-4 flex justify-between items-center border-b border-cyan-600">
-        <div className="text-cyan-400 font-extrabold text-xl">BriefMind</div>
-        <div className="flex gap-4 text-sm md:text-base items-center">
-          <Link href="/Index" className="hover:text-cyan-300 transition">
-            Inicio
-          </Link>
-          <Link href="/Checkout" className="hover:text-cyan-300 transition">
-            Checkout
-          </Link>
-          <Link href="/BriefForm" className="hover:text-cyan-300 transition">
-            BriefForm
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="text-red-400 hover:text-red-500 font-semibold transition"
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      </nav>
-
-      <div className="px-6 md:px-20 lg:px-40 py-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 animate-fadeIn">
-          {userName ? `¡Bienvenido, ${userName}!` : '¡Hola! Comienza a crear tu brief'}
-        </h1>
-        <h2 className="text-3xl font-bold mb-10">Elige tu plan</h2>
-
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
-          {plans.map(plan => (
-            <PlanCard
-              key={plan.name}
-              plan={plan}
-              selected={selectedPlan?.name === plan.name}
-              onSelect={() => setSelectedPlan(plan)}
-            />
-          ))}
-        </section>
-
-        {selectedPlan && (
-          <section className="max-w-md mx-auto bg-[#1e2a47] rounded-xl p-6 mb-8 shadow-lg border border-cyan-600">
-            <h3 className="text-2xl font-bold mb-3 flex items-center justify-between">
-              Resumen del plan
-              <FaChevronRight className="text-cyan-400" />
-            </h3>
-            <p>
-              <strong>Plan:</strong> {selectedPlan.name}
-            </p>
-            <p>
-              <strong>Precio:</strong> {selectedPlan.price}
-            </p>
-            <p>
-              <strong>Briefs incluidos:</strong> {selectedPlan.briefsIncluded}
-            </p>
-            <p>
-              <strong>Precio por briefs extra:</strong> {selectedPlan.pricePerExtraBrief}
-            </p>
-          </section>
-        )}
-
-        <button
-          disabled={!selectedPlan || loading}
-          onClick={() => setShowConfirm(true)}
-          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 px-10 py-3 rounded-xl text-lg font-semibold disabled:opacity-50 transition"
-        >
-          {loading ? <Loader /> : 'Seleccionar Plan'}
-        </button>
-      </div>
-
-      {showConfirm && selectedPlan && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50">
-          <div className="bg-[#15233c] rounded-lg p-6 max-w-md w-full text-white shadow-lg">
-            <h4 className="text-2xl font-bold mb-4">Confirmar selección</h4>
-            <p className="mb-6">
-              ¿Seguro que quieres seleccionar el plan <strong>{selectedPlan.name}</strong>?
-            </p>
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 transition"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handlePlanSelection}
-                className="px-4 py-2 rounded bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold transition"
-              >
-                Confirmar
+      <main className="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#111a2d] to-[#1a1f36] text-white">
+        {/* Navbar */}
+        <nav className="sticky top-0 z-50 w-full bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10 px-6 py-4">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <button
+              onClick={() => this.props.router.push('/Index')}
+              className="text-xl md:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
+            >
+              BriefMind
+            </button>
+            <div className="flex gap-6 items-center text-sm md:text-base">
+              <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
+              <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar Briefs</Link>
+              <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
+              <button onClick={this.handleLogout} className="text-red-400 hover:text-red-500 font-semibold transition">
+                Cerrar sesión
               </button>
             </div>
           </div>
+        </nav>
+
+        {/* Header */}
+        <header className="px-6 pt-10 md:pt-16">
+          <div className="max-w-6xl mx-auto">
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-3">Comprar Plan</h1>
+            <p className="text-gray-300 mb-8">
+              Plan actual: <span className="font-bold text-cyan-400">{userPlan || '—'}</span>
+            </p>
+          </div>
+        </header>
+
+        {/* Plans */}
+        <section className="px-6 pb-28 md:pb-36">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            {plans.map((plan) => {
+              const isSelected = selectedPlan.toLowerCase() === plan.name.toLowerCase();
+              const pricePerBrief = plan.price / plan.briefs;
+
+              return (
+                <button
+                  key={plan.name}
+                  onClick={() => this.setState({ selectedPlan: plan.name })}
+                  className={`group relative rounded-3xl p-7 text-left transition-all duration-300 border
+                    ${isSelected ? 'border-cyan-400 ring-2 ring-cyan-400/40' : 'border-white/10 hover:border-cyan-400/60'}
+                    bg-gradient-to-br ${plan.accent} to-transparent
+                    hover:translate-y-[-2px] hover:shadow-xl`}
+                >
+                  {plan.popular && (
+                    <div className="absolute -top-3 right-4 flex items-center gap-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full shadow">
+                      <FaCrown /> Popular
+                    </div>
+                  )}
+
+                  <h3 className="text-2xl font-extrabold mb-2">{plan.name}</h3>
+                  <div className="flex items-end gap-2 mb-4">
+                    <span className="text-4xl font-extrabold">${plan.price}</span>
+                    <span className="text-gray-400 mb-1">/ mes</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 mb-5">
+                    <span className="text-xs bg-white/10 text-white/90 px-3 py-1 rounded-full">{plan.briefs} briefs incluidos</span>
+                    <span className="text-xs bg-white/10 text-white/80 px-3 py-1 rounded-full">Extra ${plan.extraPrice}/brief</span>
+                    <span className="text-xs bg-white/10 text-white/70 px-3 py-1 rounded-full">~${pricePerBrief.toFixed(2)}/brief</span>
+                  </div>
+
+                  <ul className="space-y-2">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-sm text-gray-200">
+                        <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-300">
+                          <FaCheck className="h-3.5 w-3.5" />
+                        </span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className={`mt-6 text-sm font-semibold transition ${isSelected ? 'text-cyan-300' : 'text-gray-400 group-hover:text-cyan-200'}`}>
+                    {isSelected ? 'Plan seleccionado' : 'Haz clic para seleccionar'}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Sticky Summary Bar */}
+        <div className="fixed bottom-0 left-0 right-0 z-40">
+          <div className="mx-auto max-w-6xl px-6 pb-6">
+            <div className={`rounded-2xl border ${selectedPlan ? 'border-cyan-500' : 'border-white/10'} bg-[#0b1426]/95 backdrop-blur-md shadow-2xl px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4`}>
+              <div className="flex-1">
+                <div className="text-sm text-gray-400">Plan seleccionado</div>
+                <div className="text-xl font-bold">
+                  {selectedPlanObj ? `${selectedPlanObj.name} — $${selectedPlanObj.price}/mes` : '—'}
+                </div>
+                {selectedPlanObj && (
+                  <div className="text-sm text-gray-300">
+                    {selectedPlanObj.briefs} briefs/mes · Extra ${selectedPlanObj.extraPrice}/brief · ~${(selectedPlanObj.price / selectedPlanObj.briefs).toFixed(2)}/brief
+                  </div>
+                )}
+                {errorMsg && <div className="mt-2 text-sm text-red-400">{errorMsg}</div>}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => this.setState({ selectedPlan: '' })}
+                  className="px-5 py-3 rounded-xl border border-white/15 text-white/90 hover:bg-white/5 transition"
+                >
+                  Limpiar
+                </button>
+                <button
+                  onClick={this.handleBuyBriefs}
+                  className={`px-6 py-3 rounded-xl font-bold transition shadow-lg
+                    ${!selectedPlan ? 'bg-gray-700 text-white/70 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-400 to-blue-500 text-gray-900 hover:from-blue-500 hover:to-cyan-400'}`}
+                >
+                  {loading ? 'Redirigiendo…' : 'Comprar Plan'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-    </main>
+      </main>
+    );
+  }
+}
+
+/** Subcomponentes **/
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat-card rounded-2xl border border-white/10 bg-white/5 px-6 py-5 shadow-lg">
+      <div className="text-xs uppercase tracking-wide text-gray-400">{label}</div>
+      <div className="text-2xl font-extrabold mt-1">{value}</div>
+    </div>
   );
 }
+
+export default withRouter(BuyBrief);

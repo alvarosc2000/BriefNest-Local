@@ -172,4 +172,89 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   res.json({ received: true });
 });
 
+// Simular compra de plan sin Stripe
+router.post('/:userId/simulate-buy-plan', authenticateToken, async (req, res) => {
+  const { userId } = req.params;
+  const { plan } = req.body;
+
+  if (!plan) return res.status(400).json({ error: 'Plan inválido' });
+
+  try {
+    // Lógica de precios y briefs según plan
+    let briefs_available = 0, price_per_extra_brief = 0, planName = '';
+
+    if (plan.toLowerCase() === 'basic' || plan.toLowerCase() === 'básico') {
+      briefs_available = 3; price_per_extra_brief = 7; planName = 'Básico';
+    } else if (plan.toLowerCase() === 'pro') {
+      briefs_available = 10; price_per_extra_brief = 5; planName = 'Pro';
+    } else if (plan.toLowerCase() === 'premium' || plan.toLowerCase() === 'equipo') {
+      briefs_available = 30; price_per_extra_brief = 3; planName = 'Equipo';
+    } else {
+      return res.status(400).json({ error: 'Plan no válido' });
+    }
+
+    // Fecha de renovación = 1 mes desde hoy
+    const renewalDate = new Date();
+    renewalDate.setMonth(renewalDate.getMonth() + 1);
+
+    const result = await db.query(
+      `UPDATE users
+       SET subscription_plan = $1,
+           briefs_available = $2,
+           briefs_used = 0,
+           price_per_extra_brief = $3,
+           subscription_renewal = $4,
+           isexpired = false
+       WHERE id = $5
+       RETURNING *`,
+      [planName, briefs_available, price_per_extra_brief, renewalDate, userId]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    res.json({ message: `Plan ${planName} comprado con éxito`, user: result.rows[0] });
+
+  } catch (err) {
+    console.error('Error al simular compra de plan:', err);
+    res.status(500).json({ error: 'Error al actualizar plan' });
+  }
+});
+
+// Simular compra de briefs sin Stripe
+router.post('/:userId/simulate-buy-briefs', authenticateToken, async (req, res) => {
+  const { userId } = req.params;
+  const { quantity } = req.body;
+
+  if (!quantity || quantity < 1) return res.status(400).json({ error: 'Cantidad inválida' });
+
+  try {
+    const userResult = await db.query('SELECT subscription_plan, isexpired FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const user = userResult.rows[0];
+
+    if (!user.subscription_plan || user.isexpired) {
+      return res.status(403).json({ error: 'No puedes comprar briefs si tu plan no está activo' });
+    }
+
+    const updateResult = await db.query(
+      `UPDATE users
+       SET briefs_available = briefs_available + $1
+       WHERE id = $2
+       RETURNING briefs_available, briefs_used`,
+      [quantity, userId]
+    );
+
+    res.json({
+      message: `Se compraron ${quantity} briefs extra`,
+      user: updateResult.rows[0],
+    });
+
+  } catch (err) {
+    console.error('Error al simular compra de briefs:', err);
+    res.status(500).json({ error: 'Error al actualizar briefs' });
+  }
+});
+
+
 module.exports = router;

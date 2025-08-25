@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type Plan = {
   name: string;
@@ -15,7 +15,7 @@ const plans: Plan[] = [
     briefsIncluded: 3,
     pricePerExtraBrief: "$7 USD",
     description:
-      "Perfecto para freelancers. Accede al formulario inteligente con exportación en PDF y Word. Precio fijo mensual.",
+      "Perfecto para freelancers. Accede al formulario inteligente con exportación en PDF. Precio fijo mensual.",
   },
   {
     name: "Pro",
@@ -23,7 +23,7 @@ const plans: Plan[] = [
     briefsIncluded: 10,
     pricePerExtraBrief: "$5 USD",
     description:
-      "Para profesionales activos. Mismo formulario potente, exportación en PDF/Word y más briefs incluidos.",
+      "Para profesionales activos. Mismo formulario potente, exportación en PDF y más briefs incluidos.",
   },
   {
     name: "Premium",
@@ -31,90 +31,87 @@ const plans: Plan[] = [
     briefsIncluded: 30,
     pricePerExtraBrief: "$3 USD",
     description:
-      "Optimizado para agencias y equipos. Uso colaborativo, mismo acceso a funciones, y más volumen mensual.",
+      "Optimizado para agencias y equipos. Uso colaborativo, acceso a funciones avanzadas y más volumen mensual.",
   },
 ];
 
 export default function Landing() {
-  const [scrolled, setScrolled] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <main className="relative min-h-screen bg-[#0F172A] text-white font-inter overflow-hidden scroll-smooth">
+    <main className="relative min-h-screen bg-[#0f172a] text-white font-inter overflow-x-hidden">
       <AnimatedBackground />
 
-      {/* Intro */}
-      <section className="relative z-10 flex flex-col items-center justify-center text-center min-h-screen px-6 md:px-20 lg:px-40 bg-gradient-to-br from-[#071b2e] via-[#0c2a4a] to-[#061827] animate-backgroundPulse">
-        <h1
-          className="text-6xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight select-none"
-          style={{
-            background: "linear-gradient(90deg, #06b6d4, #0ea5e9, #3b82f6)",
-            backgroundClip: "text",
-            WebkitBackgroundClip: "text",
-            textShadow: "0 0 12px rgba(231, 208, 73, 0.7)",
-          }}
-        >
-          BriefMind{" "}
-          <span className="inline-block animate-bounce-smooth ml-2" role="img" aria-label="cerebro">
-            💡
-          </span>
+      {/* Hero Section */}
+      <section className="relative flex flex-col items-center justify-center text-center min-h-screen md:min-h-[105vh] px-6 md:px-20 lg:px-40 overflow-hidden bg-gradient-to-br from-[#071b2e] via-[#0c2a4a] to-[#061827]">
+        
+        {/* Fondo animado con partículas */}
+        <div className="absolute inset-0">
+          {Array.from({ length: 70 }).map((_, i) => (
+            <span
+              key={i}
+              className="absolute rounded-full opacity-20 animate-floating"
+              style={{
+                width: `${3 + Math.random() * 7}px`,
+                height: `${3 + Math.random() * 7}px`,
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                backgroundColor: `hsl(${Math.random() * 200 + 160}, 70%, 60%)`,
+                animationDuration: `${5 + Math.random() * 6}s`,
+                animationDelay: `${Math.random() * 2}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Título principal */}
+        <h1 className="text-6xl md:text-7xl font-extrabold mb-6 leading-tight bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent animate-fade-in-up shadow-glow">
+          BriefMind
         </h1>
 
-        <p className="max-w-3xl text-lg md:text-xl text-gray-300 mb-12 leading-relaxed">
-          Crea <span className="font-semibold text-cyan-400">briefs inteligentes</span> con IA.
-          <br />
-          El mismo potente formulario para todos los planes. Exporta a PDF y Word. Simple y profesional.
+        {/* Subtítulo */}
+        <p className="max-w-3xl text-lg md:text-xl text-gray-300 mb-12 animate-fade-in-up delay-200 leading-relaxed">
+          Genera briefs inteligentes en minutos con IA, listos para entregar a tus clientes o equipo. 
+          Optimiza tu flujo de trabajo, ahorra tiempo y mejora tu productividad con documentos claros y profesionales.
         </p>
 
+        {/* Beneficios destacados */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto mb-12 animate-fade-in-up delay-400">
+          <div className="bg-[#0c1a33]/70 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/10">
+            <h3 className="text-xl font-bold text-cyan-300 mb-2">Ahorra tiempo</h3>
+            <p className="text-gray-300 text-sm">Genera briefs completos en minutos con nuestro formulario inteligente y plantillas prediseñadas.</p>
+          </div>
+          <div className="bg-[#0c1a33]/70 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/10">
+            <h3 className="text-xl font-bold text-cyan-300 mb-2">Profesionalismo</h3>
+            <p className="text-gray-300 text-sm">Entrega briefs claros y bien estructurados que impresionan a tus clientes y equipo.</p>
+          </div>
+          <div className="bg-[#0c1a33]/70 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/10">
+            <h3 className="text-xl font-bold text-cyan-300 mb-2">Escalabilidad</h3>
+            <p className="text-gray-300 text-sm">Ideal para freelancers, profesionales y agencias. Crea tantos briefs como necesites.</p>
+          </div>
+        </div>
+
+        {/* CTA principal */}
         <a
           href="/LoginRegister"
-          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold rounded-full px-12 py-4 shadow-xl hover:shadow-cyan-400 transition-all duration-300 transform hover:scale-105 animate-pulse"
+          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold rounded-full px-16 py-5 shadow-xl hover:shadow-cyan-400 transition-all duration-300 transform hover:scale-105 animate-pulse"
         >
-          Empezar ahora
+          Comenzar ahora
         </a>
-
-        <style jsx>{`
-          @keyframes backgroundPulse {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-          }
-          .animate-backgroundPulse {
-            background-size: 200% 200%;
-            animation: backgroundPulse 10s ease infinite;
-          }
-          @keyframes bounceSmooth {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10%); }
-          }
-          .animate-bounce-smooth {
-            animation: bounceSmooth 2.5s ease-in-out infinite;
-          }
-        `}</style>
       </section>
 
-      {/* Planes */}
-      <section className="relative z-10 bg-[#1e2a47] py-20 px-6 md:px-20 lg:px-40 text-center">
-        <h2 className="text-3xl font-bold mb-6">Planes y precios</h2>
-        <p className="text-gray-300 max-w-xl mx-auto mb-12">
-          Todos los planes incluyen acceso completo al formulario y exportaciones en PDF y Word.
-        </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      {/* Planes Section */}
+      <section className="relative z-10 py-20 px-6 md:px-20 lg:px-40 text-center bg-[#1e2a47]">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6">Planes y precios</h2>
+        <p className="text-gray-300 max-w-xl mx-auto mb-12">
+          Todos los planes incluyen acceso completo al formulario y exportación en PDF.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 max-w-6xl mx-auto">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              onClick={() => setSelectedPlan(plan)}
-              className={`bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-                selectedPlan?.name === plan.name ? "border-2 border-cyan-400" : ""
-              }`}
+              className="bg-gradient-to-tr from-[#0f172a]/80 via-[#16223b]/60 to-[#0c1a33]/80 backdrop-blur-md border border-white/10 rounded-3xl p-8 shadow-2xl animate-fade-in-up transition-transform duration-300 hover:scale-105 hover:shadow-cyan-500"
             >
-              <h3 className="text-2xl font-bold mb-4 text-cyan-300">{plan.name}</h3>
+              <h3 className="text-2xl font-bold mb-3 text-cyan-300">{plan.name}</h3>
               <div className="text-3xl font-extrabold text-white mb-2">{plan.price}</div>
               <p className="text-gray-300 mb-1">{plan.briefsIncluded} briefs incluidos</p>
               <p className="text-gray-400 mb-4">Extra: {plan.pricePerExtraBrief}</p>
@@ -124,32 +121,21 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Opiniones */}
-      <section className="relative z-10 bg-[#16223B] py-20 px-6 md:px-20 lg:px-40 text-center">
-        <h2 className="text-3xl font-bold mb-6">Lo que opinan nuestros usuarios</h2>
+      {/* Testimonios */}
+      <section className="relative z-10 py-20 px-6 md:px-20 lg:px-40 bg-[#16223B] text-center">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6">Opiniones de usuarios</h2>
         <p className="text-gray-300 max-w-2xl mx-auto mb-12">
-          Profesionales y equipos ya están optimizando su flujo de trabajo con BriefMind.
+          Profesionales y equipos optimizan su flujo de trabajo con BriefMind.
         </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto text-left">
-          {[{
-            name: "Ana Martínez",
-            role: "Brand Strategist",
-            text: "BriefMind me ahorra horas. Los briefs son claros, organizados y listos para el cliente.",
-          },
-          {
-            name: "Carlos Gómez",
-            role: "Consultor de Marketing",
-            text: "Mis clientes notaron la diferencia desde el primer brief. Herramienta imprescindible.",
-          },
-          {
-            name: "Laura Ríos",
-            role: "Agencia Boutique",
-            text: "Colaborar en equipo nunca fue tan fácil. Todo el equipo genera briefs claros y consistentes.",
-          }].map((op) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {[
+            { name: "Ana Martínez", role: "Brand Strategist", text: "BriefMind me ahorra horas. Los briefs son claros, organizados y listos para el cliente." },
+            { name: "Carlos Gómez", role: "Consultor de Marketing", text: "Mis clientes notaron la diferencia desde el primer brief. Herramienta imprescindible." },
+            { name: "Laura Ríos", role: "Agencia Boutique", text: "Colaborar en equipo nunca fue tan fácil. Todo el equipo genera briefs claros y consistentes." },
+          ].map((op, idx) => (
             <blockquote
               key={op.name}
-              className="bg-white/5 backdrop-blur-md p-6 rounded-xl shadow-lg text-gray-300 border border-white/10 hover:scale-[1.02] transition-all duration-300"
+              className={`bg-gradient-to-tr from-[#1e2a47]/80 via-[#16223b]/60 to-[#0c1a33]/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-white/10 text-gray-300 transition-transform duration-300 hover:scale-[1.02] animate-fade-in-up delay-${idx * 100}`}
             >
               <p className="italic mb-4">“{op.text}”</p>
               <div className="font-semibold text-white">{op.name}</div>
@@ -160,14 +146,14 @@ export default function Landing() {
       </section>
 
       {/* CTA final */}
-      <section className="relative z-10 py-20 px-6 md:px-20 lg:px-40 text-center bg-[#0F172A]">
-        <h2 className="text-4xl font-bold mb-6">¿Listo para comenzar?</h2>
-        <p className="max-w-xl mx-auto text-gray-300 mb-8">
+      <section className="relative z-10 py-20 px-6 md:px-20 lg:px-40 text-center bg-gradient-to-tr from-[#071b2e] via-[#0c2a4a] to-[#061827]">
+        <h2 className="text-4xl md:text-5xl font-bold mb-6 animate-fade-in-up">¿Listo para comenzar?</h2>
+        <p className="max-w-xl mx-auto text-gray-300 mb-8 animate-fade-in-up delay-200">
           Comienza a generar briefs potentes con IA. Sin complicaciones.
         </p>
         <a
-          href="/"
-          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold rounded-full px-10 py-4 shadow-lg hover:shadow-cyan-400 transition-all duration-300 animate-pulse"
+          href="/LoginRegister"
+          className="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-semibold rounded-full px-12 py-4 shadow-xl hover:shadow-cyan-400 transition-all duration-300 animate-pulse"
         >
           Crear mi primer brief
         </a>
