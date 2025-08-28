@@ -1,12 +1,9 @@
 'use client';
 
 import React, { Component } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
 import { FaCheck, FaCrown } from 'react-icons/fa';
 import { withRouter } from 'next/router';
 import Link from 'next/link';
-
-const stripePromise = loadStripe('pk_test_51Rt8hjBRmozeY5V28OlghjWReZVDJtSP2TfpIym9bOjucj4IXVSFBhd6SpHzkGl9tHLdCkkXO4TiwoYbbAELwHoQ00AaxTd3Ew');
 
 type Plan = {
   name: 'Basic' | 'Pro' | 'Premium';
@@ -24,7 +21,7 @@ const plans: Plan[] = [
     price: 10,
     briefs: 3,
     extraPrice: 7,
-    features: ['Formulario inteligente de briefs', 'Exportación en PDF', 'Historial básico'],
+    features: ['Genera briefs estratégicos con IA (Español/Inglés)', 'Exportación en PDF', 'Entregables en PDF 100% profesionales','Próximamente: historial de briefs*'],
     accent: 'from-cyan-500/20',
   },
   {
@@ -32,7 +29,7 @@ const plans: Plan[] = [
     price: 30,
     briefs: 10,
     extraPrice: 5,
-    features: ['Todo lo de Basic', 'Plantillas reutilizables', 'Colaboración sencilla'],
+    features: ['Todo lo de Basic', 'Mejor precio por brief', 'Pensado para profesionales activos','Próximamente: plantillas reutilizables'],
     accent: 'from-blue-500/20',
     popular: true,
   },
@@ -41,7 +38,7 @@ const plans: Plan[] = [
     price: 80,
     briefs: 30,
     extraPrice: 3,
-    features: ['Todo lo de Pro', 'Espacios de equipo', 'Soporte prioritario'],
+    features: ['Mejor volumen y precio unitario', 'Optimizado para agencias y equipos', 'Próximamente: espacios colaborativos y dashboard avanzado*'],
     accent: 'from-purple-500/20',
   },
 ];
@@ -91,7 +88,7 @@ class BuyBrief extends Component<any, BuyBriefState> {
       .catch(() => this.setState({ isAuthenticated: false }));
   }
 
-  handleBuyBriefs = async () => {
+  handleSimulateBuyPlan = async () => {
     const { selectedPlan } = this.state;
     const token = localStorage.getItem('token');
     const userId = localStorage.getItem('user_id');
@@ -103,18 +100,19 @@ class BuyBrief extends Component<any, BuyBriefState> {
 
     this.setState({ loading: true, errorMsg: null });
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${userId}/plan/checkout-session`, {
+      const res = await fetch(`http://localhost:5000/api/users/${userId}/simulate-buy-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ plan: selectedPlan }),
       });
 
       const data = await res.json();
-      if (!res.ok || !data.checkoutUrl) throw new Error(data.error || 'Error al crear la sesión');
+      if (!res.ok) throw new Error(data.error || 'Error al actualizar plan');
 
-      window.location.href = data.checkoutUrl;
+      this.setState({ userPlan: data.user.subscription_plan });
+      alert(`Plan ${data.user.subscription_plan} comprado con éxito`);
     } catch (err: any) {
-      this.setState({ errorMsg: err?.message || 'No se pudo iniciar la compra.' });
+      this.setState({ errorMsg: err?.message || 'No se pudo actualizar el plan.' });
     } finally {
       this.setState({ loading: false });
     }
@@ -163,7 +161,7 @@ class BuyBrief extends Component<any, BuyBriefState> {
         {/* Header */}
         <header className="px-6 pt-10 md:pt-16">
           <div className="max-w-6xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-3">Comprar Plan</h1>
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-3">Comprar o actualiza tu Plan</h1>
             <p className="text-gray-300 mb-8">
               Plan actual: <span className="font-bold text-cyan-400">{userPlan || '—'}</span>
             </p>
@@ -249,11 +247,11 @@ class BuyBrief extends Component<any, BuyBriefState> {
                   Limpiar
                 </button>
                 <button
-                  onClick={this.handleBuyBriefs}
+                  onClick={this.handleSimulateBuyPlan}
                   className={`px-6 py-3 rounded-xl font-bold transition shadow-lg
                     ${!selectedPlan ? 'bg-gray-700 text-white/70 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-400 to-blue-500 text-gray-900 hover:from-blue-500 hover:to-cyan-400'}`}
                 >
-                  {loading ? 'Redirigiendo…' : 'Comprar Plan'}
+                  {loading ? 'Procesando…' : 'Comprar Plan'}
                 </button>
               </div>
             </div>

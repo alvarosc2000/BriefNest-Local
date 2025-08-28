@@ -1,25 +1,26 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+'use client';
 
-const CheckoutCancel = () => {
-  const navigate = useNavigate();
+import { useRouter } from 'next/navigation';
+
+export default function CheckoutCancel() {
+  const router = useRouter();
 
   const handleRetry = () => {
-    navigate('/');  // O la ruta donde tengas tus planes/precios
+    router.push('/BuyBrief'); // Redirige a la página de compra de briefs
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen text-center p-4">
+    <main className="flex flex-col items-center justify-center h-screen text-center p-4 bg-gradient-to-br from-[#0F172A] to-[#1a1f36] text-white">
       <h1 className="text-4xl font-bold mb-4 text-red-500">¡Pago Cancelado! ❌</h1>
-      <p className="text-lg mb-6">Parece que cancelaste el pago. Si fue un error, puedes intentarlo de nuevo.</p>
+      <p className="text-lg mb-6">
+        Parece que cancelaste el pago. Si fue un error, puedes intentarlo de nuevo.
+      </p>
       <button
         onClick={handleRetry}
         className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-md transition"
       >
         Volver a Intentar
       </button>
-    </div>
+    </main>
   );
-};
-
-export default CheckoutCancel;
+}

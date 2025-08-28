@@ -38,7 +38,7 @@ interface BriefFormData {
 }
 
 /** Opciones reutilizables */
-const tonesOptions = ['Formal', 'Cercano', 'Inspirador', 'Técnico', 'Divertido'];
+const tonesOptions = ['Inglés','Español'];
 const channelsOptions = [
   'Instagram',
   'Facebook',
@@ -114,6 +114,8 @@ export default function ProjectBriefForm(): JSX.Element {
   const [animating, setAnimating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadingPlan, setLoadingPlan] = useState<boolean>(false);
+  const [loadingDownload, setLoadingDownload] = useState(false);
+
 
   const router = useRouter();
 
@@ -332,6 +334,8 @@ export default function ProjectBriefForm(): JSX.Element {
       final_format: form.finalFormat,
     };
 
+    setLoadingDownload(true)
+
     try {
       const response = await fetch('http://localhost:5000/api/projects', {
         method: 'POST',
@@ -369,6 +373,8 @@ export default function ProjectBriefForm(): JSX.Element {
       }
     } catch (error) {
       alert('Error de conexión. Intenta de nuevo.');
+    } finally{
+      setLoadingDownload(false);
     }
   };
 
@@ -410,7 +416,7 @@ export default function ProjectBriefForm(): JSX.Element {
           <Textarea label="Necesidades de la audiencia" name="audienceNeeds" value={form.audienceNeeds} onChange={handleChange} />
           <Textarea label="Mensaje principal" name="mainMessage" value={form.mainMessage} onChange={handleChange} required error={errors.mainMessage} />
           <Textarea label="Diferenciación" name="differentiation" value={form.differentiation} onChange={handleChange} />
-          <Select label="Tono de comunicación" name="tone" value={form.tone} onChange={handleChange} options={tonesOptions} />
+          <Select label="Idioma" name="tone" value={form.tone} onChange={handleChange} options={tonesOptions} />
         </div>
       ),
     },
@@ -503,6 +509,17 @@ export default function ProjectBriefForm(): JSX.Element {
             </header>
 
             <form onSubmit={handleSubmit} className={`space-y-6 ${animating ? 'opacity-60' : 'opacity-100'}`} noValidate>
+
+              {loadingDownload && (
+                  <div className="mb-4">
+                    <select
+                      className="w-full px-3 py-2 rounded-md bg-white text-slate-800 border border-slate-300"
+                      disabled
+                    >
+                      <option>Cargando…</option>
+                    </select>
+                  </div>
+                )}
               <div>
                 <h2 className="text-lg font-semibold text-white/90 mb-3">{steps[step].title}</h2>
                 <div className="bg-white rounded-lg p-5 border border-white/10">
@@ -544,9 +561,28 @@ export default function ProjectBriefForm(): JSX.Element {
                     <button
                       type="submit"
                       className="px-5 py-2 rounded-md bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition"
+                      disabled={loadingDownload}
                     >
-                      Enviar brief
+                      {loadingDownload ? 'Generando PDF…' : 'Enviar brief'}
                     </button>
+                  )}
+                  {loadingDownload && (
+                    <div className="mb-4 w-full relative">
+                      {/* Contenedor del select simulado */}
+                      <div className="relative w-full rounded-md border-2 border-gray-600 bg-gray-800 overflow-hidden shadow-lg">
+                        
+                        {/* Skeleton animado */}
+                        <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700"></div>
+                        
+                        {/* Spinner y texto centrado */}
+                        <div className="flex items-center justify-center h-12 relative z-10 gap-2">
+                          {/* Spinner */}
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent border-b-transparent rounded-full animate-spin"></div>
+                          {/* Texto */}
+                          <span className="text-gray-300 font-medium">Cargando…</span>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

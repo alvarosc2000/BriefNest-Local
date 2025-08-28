@@ -102,6 +102,45 @@ class UserController {
     }
   }
 
+
+   async  resetPassword(req, res) {
+    const { name, email, newPassword } = req.body;
+
+    if (!name || !email || !newPassword) {
+      return res.status(400).json({ message: 'Faltan datos' });
+    }
+
+    try {
+      // Buscar usuario por nombre
+      const result = await db.query('SELECT * FROM users WHERE name = $1', [name]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
+
+      const user = result.rows[0];
+
+      // Verificar que el email coincida
+      if (user.email !== email) {
+        return res.status(400).json({ message: 'El correo no coincide con el usuario' });
+      }
+
+      // Hashear la nueva contraseña
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      // Actualizar contraseña
+      await db.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, user.id]);
+
+      res.status(200).json({ message: 'Contraseña restablecida con éxito' });
+    } catch (err) {
+      console.error('Error en resetPassword:', err);
+      res.status(500).json({ message: 'Error al restablecer contraseña' });
+    }
+  }
+
+
+
   async loginUser(req, res) {
     const { name, password } = req.body;
 

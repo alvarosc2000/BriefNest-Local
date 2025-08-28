@@ -13,7 +13,8 @@ const {
   authenticateToken,
   getUserPlanWithExpirationCheck,
   updateUserPlanAfterPayment,
-  updateUserBriefsAfterPayment
+  updateUserBriefsAfterPayment,
+  resetPassword 
 } = require('../controllers/userController');
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -25,8 +26,9 @@ router.put('/:userId/plan', updateUserPlan);
 router.put('/:userId/buy-brief', authenticateToken, buyExtraBrief);
 router.get('/:userId/info-plan', getUserPlanWithExpirationCheck);
 router.get('/:userId', getUserById);
+router.post('/:reset-password', resetPassword );
 
-// Crear sesión de pago para comprar briefs extra
+// Crear sesión de pago para comprar briefs extra (Stripe)
 router.post('/:userId/briefs/checkout-session', authenticateToken, async (req, res) => {
   const { userId } = req.params;
   const { quantity } = req.body;
@@ -37,7 +39,7 @@ router.post('/:userId/briefs/checkout-session', authenticateToken, async (req, r
 
   try {
     const result = await db.query(
-      'SELECT subscription_plan FROM users WHERE id = $1',
+      'SELECT subscription_plan, isexpired FROM users WHERE id = $1',
       [userId]
     );
 
@@ -45,16 +47,21 @@ router.post('/:userId/briefs/checkout-session', authenticateToken, async (req, r
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    const plan = result.rows[0].subscription_plan;
+    const user = result.rows[0];
+
+    if (!user.subscription_plan || user.isexpired) {
+      return res.status(403).json({ error: 'No puedes comprar briefs si tu plan no está activo' });
+    }
+
     const pricesByPlan = {
-      básico: 700,
+      básico: 700,  // $7.00
       basic: 700,
-      pro: 500,
-      premium: 300,
+      pro: 500,     // $5.00
+      premium: 300, // $3.00
       equipo: 300
     };
 
-    const unitAmount = pricesByPlan[plan?.toLowerCase()] || 700;
+    const unitAmount = pricesByPlan[user.subscription_plan.toLowerCase()] || 700;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -63,7 +70,7 @@ router.post('/:userId/briefs/checkout-session', authenticateToken, async (req, r
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `Compra de ${quantity} brief(s) extra(s) - Plan ${plan}`,
+            name: `Compra de ${quantity} brief(s) extra(s) - Plan ${user.subscription_plan}`,
           },
           unit_amount: unitAmount,
         },
@@ -78,7 +85,9 @@ router.post('/:userId/briefs/checkout-session', authenticateToken, async (req, r
       },
     });
 
-    return res.json({ sessionId: session.id });
+    // Devuelve la URL directamente para que el frontend redirija
+    return res.json({ checkoutUrl: session.url });
+
   } catch (err) {
     console.error('Error al crear sesión de checkout para briefs:', err);
     return res.status(500).json({ error: 'Error al crear la sesión de pago' });

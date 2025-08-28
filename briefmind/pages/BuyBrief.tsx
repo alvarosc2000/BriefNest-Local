@@ -4,9 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaCheckCircle, FaSignOutAlt, FaPlus, FaMinus, FaGift, FaInfoCircle } from 'react-icons/fa';
 import Link from 'next/link';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe('pk_test_51Rt8hjBRmozeY5V28OlghjWReZVDJtSP2TfpIym9bOjucj4IXVSFBhd6SpHzkGl9tHLdCkkXO4TiwoYbbAELwHoQ00AaxTd3Ew');
 
 const Loader = () => (
   <div className="flex justify-center items-center space-x-2">
@@ -29,6 +26,7 @@ export default function BuyBrief() {
 
   const router = useRouter();
 
+  // Cargar info del usuario
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userId = localStorage.getItem('user_id');
@@ -82,12 +80,11 @@ export default function BuyBrief() {
       });
 
       const data = await res.json();
-      if (!res.ok || !data.sessionId) throw new Error(data.message || 'Error al crear sesión de pago.');
+      if (!res.ok || !data.checkoutUrl) throw new Error(data.message || 'Error al crear sesión de pago.');
 
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe no se cargó correctamente.');
+      // Redirige seguro a Stripe Checkout
+      window.location.href = data.checkoutUrl;
 
-      await stripe.redirectToCheckout({ sessionId: data.sessionId });
     } catch (error: any) {
       alert('No se pudo iniciar el pago: ' + error.message);
     } finally {
@@ -134,22 +131,21 @@ export default function BuyBrief() {
             Plan actual: <span className="font-bold text-cyan-300">{userPlan ?? 'Ninguno'}</span>
           </p>
 
-          {/* Counters */}
+          {/* Contador briefs */}
           <div className="flex justify-center gap-6 mb-10">
-            {/* Disponibles */}
             <div className="relative w-72 bg-gradient-to-tr from-cyan-600/30 to-blue-500/30 p-6 rounded-2xl text-center border border-cyan-400 shadow-lg hover:scale-105 transition-transform overflow-hidden">
               <div className="absolute -top-10 -right-10 w-24 h-24 bg-cyan-400/20 rounded-full animate-spin-slow"></div>
               <p className="text-sm text-gray-300 uppercase tracking-wide">Disponibles</p>
               <p className="text-4xl font-extrabold text-green-400">{briefsAvailable - briefsUsed}</p>
             </div>
-            </div>
+          </div>
 
-          {/* Quantity selector */}
-          <div className="mb-8">
+          {/* Selector de cantidad */}
+          <div className="mb-8 flex flex-col items-center">
             <label className="block mb-3 text-lg font-medium text-white flex items-center justify-center gap-2">
               <FaInfoCircle className="text-cyan-300 animate-bounce" /> Cantidad de briefs a comprar
             </label>
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-4 mb-4">
               <button
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
                 className="bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-3 rounded-full text-xl transition-shadow shadow-md hover:shadow-cyan-400"
@@ -170,28 +166,28 @@ export default function BuyBrief() {
                 <FaPlus />
               </button>
             </div>
-            <p className="mt-4 text-md text-cyan-300 text-center">
-              Total a pagar: <span className="font-bold text-green-400">${(quantity * pricePerBrief).toFixed(2)} USD</span>
+            <p className="text-md text-cyan-300 text-center">
+              Total aproximado: <span className="font-bold text-green-400">${(quantity * pricePerBrief).toFixed(2)} USD</span>
             </p>
           </div>
 
-          {/* Buy button */}
+          {/* Botón de compra */}
           <button
             onClick={handleBuyBrief}
-            disabled={loading}
+            disabled={loading || !userPlan}
             className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-blue-500 hover:to-cyan-400 text-gray-900 px-6 py-4 rounded-2xl text-lg font-bold disabled:opacity-50 shadow-xl hover:shadow-cyan-400 transition-all transform hover:scale-105"
           >
-            {loading ? <Loader /> : `Comprar ${quantity} brief(s)`}
+            {loading ? <Loader /> : userPlan ? `Comprar ${quantity} brief(s)` : 'Debes tener un plan activo'}
           </button>
 
-          {/* Success message */}
+          {/* Mensaje de éxito */}
           {success && (
             <div className="mt-6 text-green-400 font-semibold flex items-center gap-2 justify-center animate-fade-in">
               <FaCheckCircle /> ¡Compra realizada con éxito!
             </div>
           )}
 
-          {/* Extra Info */}
+          {/* Información extra */}
           <div className="mt-12 text-gray-400 text-sm text-center space-y-3">
             <p><FaGift className="inline mr-2 text-yellow-400" />Cada compra agrega briefs a tu plan automáticamente.</p>
           </div>
