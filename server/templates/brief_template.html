@@ -7,16 +7,17 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap');
 
     :root {
-      --primary-color: #0F766E;   /* Teal oscuro elegante */
+      --primary-color: #0F766E;   /* Verde Teal premium */
       --accent-color: #F59E0B;    /* Dorado sobrio */
       --text-color: #1F2937;
       --muted-color: #6B7280;
       --bg-light: #F9FAFB;
+      --bg-highlight: #FFF8E7;
     }
 
     body {
       font-family: 'Inter', sans-serif;
-      background-color: white;
+      background-color: #fff;
       margin: 60px 80px;
       color: var(--text-color);
       line-height: 1.8;
@@ -33,7 +34,7 @@
       font-size: 42px;
       font-weight: 700;
       color: var(--primary-color);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       letter-spacing: -0.5px;
     }
 
@@ -51,7 +52,7 @@
       font-family: 'Playfair Display', serif;
       font-size: 26px;
       color: var(--text-color);
-      border-left: 5px solid var(--accent-color);
+      border-left: 6px solid var(--accent-color);
       padding-left: 14px;
       margin-top: 60px;
       margin-bottom: 20px;
@@ -72,7 +73,7 @@
     }
 
     ul {
-      margin-left: 24px;
+      margin-left: 22px;
       padding-left: 0;
     }
 
@@ -97,23 +98,41 @@
       margin: 25px 0;
     }
 
+    /* Tablas profesionales */
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 20px 0;
+      margin: 30px 0;
       font-size: 15px;
     }
 
     table th, table td {
       border: 1px solid #E5E7EB;
-      padding: 10px 14px;
+      padding: 12px 16px;
       text-align: left;
+      vertical-align: top;
     }
 
     table th {
       background-color: var(--bg-light);
       color: var(--primary-color);
       font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 14px;
+    }
+
+    table tr:nth-child(even) td {
+      background-color: #FAFAFA;
+    }
+
+    table caption {
+      caption-side: top;
+      font-family: 'Playfair Display', serif;
+      font-weight: 600;
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: var(--primary-color);
     }
 
     .section-break {
@@ -137,6 +156,7 @@
       color: var(--primary-color);
     }
 
+    /* Numeración automática en H2 */
     .numbered h2::before {
       counter-increment: section;
       content: counter(section) ". ";
@@ -155,6 +175,16 @@
 
     a:hover {
       text-decoration: underline;
+    }
+
+    /* Callouts extra pro */
+    .callout {
+      background-color: var(--bg-highlight);
+      border: 1px solid var(--accent-color);
+      padding: 18px 22px;
+      margin: 28px 0;
+      border-radius: 6px;
+      font-size: 15px;
     }
   </style>
 </head>

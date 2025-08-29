@@ -117,9 +117,11 @@ exports.createProject = async (req, res) => {
               Offer extended guidance: tone of voice, key themes, specific words/ideas to avoid, storytelling style, and examples of visual cues.
 
             - **Activation Tactical Matrix**  
-              Present a complete table linking:  
-              Objective → Channel → Format → KPI → Message or focus.  
-              This must be practical, detailed, and usable by creative, content, and media teams.
+              Activation Tactical Matrix
+              Present this section in valid HTML format using the '<table>' tag.
+              It should include clear columns: Objective | Channel | Format | KPI | Message.
+              Use '<thead>' for headers and '<tbody>' for rows.
+              Ensure it is a well-structured and readable table in a PDF document.
 
             - **Strategic Function of Each Deliverable**  
               Explain the role of each asset in the funnel (awareness, consideration, conversion, retention) and how it supports the business goal.
@@ -278,9 +280,11 @@ exports.createProject = async (req, res) => {
               Guía extendida sobre cómo contar la historia: tono de voz, palabras prohibidas, enfoques narrativos, ejemplos de recursos visuales.
 
             - **Matriz táctica de activación**  
-              Tabla que vincule de manera completa:  
-              Objetivo → Canal → Formato → KPI → Mensaje.  
-              Debe ser práctica, clara y lista para equipos creativos, de medios y de contenido.
+              + #### Matriz táctica de activación  
+              + Presenta esta sección en **formato HTML válido** con la etiqueta '<table>'.  
+              + Debe incluir columnas claras: Objetivo | Canal | Formato | KPI | Mensaje.  
+              + Usa '<thead>' para encabezados y '<tbody>' para filas.  
+              + Asegúrate de que sea una tabla bien estructurada y legible en un documento PDF.
 
             - **Función estratégica de cada entregable**  
               Explica cómo cada pieza aporta en el funnel (atraer, educar, convertir, fidelizar).
