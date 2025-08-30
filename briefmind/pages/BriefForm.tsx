@@ -4,6 +4,7 @@ import React, { JSX, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FaSignOutAlt } from 'react-icons/fa';
+import DownloadingView from "./DownloadingView"; // ajusta la ruta según tu estructura
 
 /** Tipado del formulario */
 interface BriefFormData {
@@ -509,17 +510,6 @@ export default function ProjectBriefForm(): JSX.Element {
             </header>
 
             <form onSubmit={handleSubmit} className={`space-y-6 ${animating ? 'opacity-60' : 'opacity-100'}`} noValidate>
-
-              {loadingDownload && (
-                  <div className="mb-4">
-                    <select
-                      className="w-full px-3 py-2 rounded-md bg-white text-slate-800 border border-slate-300"
-                      disabled
-                    >
-                      <option>Cargando…</option>
-                    </select>
-                  </div>
-                )}
               <div>
                 <h2 className="text-lg font-semibold text-white/90 mb-3">{steps[step].title}</h2>
                 <div className="bg-white rounded-lg p-5 border border-white/10">
@@ -529,17 +519,17 @@ export default function ProjectBriefForm(): JSX.Element {
 
               {/* navegación y acciones */}
               <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-                <div className="flex gap-3 w-full md:w-auto">
-                  <button
-                    type="button"
-                    onClick={handleSaveDraft}
-                    className="px-4 py-2 rounded-md bg-amber-400 text-slate-900 font-semibold hover:bg-amber-500 transition"
-                  >
-                    Guardar borrador
-                  </button>
-                </div>
+                {/* Botón Guardar borrador */}
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  className="px-4 py-2 rounded-md bg-amber-400 text-slate-900 font-semibold hover:bg-amber-500 transition w-full md:w-auto"
+                >
+                  Guardar borrador
+                </button>
 
-                <div className="ml-auto flex gap-3">
+                {/* Botones de navegación y envío */}
+                <div className="flex gap-3 items-center w-full md:w-auto">
                   {step > 0 && (
                     <button
                       type="button"
@@ -549,6 +539,7 @@ export default function ProjectBriefForm(): JSX.Element {
                       Anterior
                     </button>
                   )}
+
                   {step < steps.length - 1 ? (
                     <button
                       type="button"
@@ -566,26 +557,18 @@ export default function ProjectBriefForm(): JSX.Element {
                       {loadingDownload ? 'Generando PDF…' : 'Enviar brief'}
                     </button>
                   )}
-                  {loadingDownload && (
-                    <div className="mb-4 w-full relative">
-                      {/* Contenedor del select simulado */}
-                      <div className="relative w-full rounded-md border-2 border-gray-600 bg-gray-800 overflow-hidden shadow-lg">
-                        
-                        {/* Skeleton animado */}
-                        <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700"></div>
-                        
-                        {/* Spinner y texto centrado */}
-                        <div className="flex items-center justify-center h-12 relative z-10 gap-2">
-                          {/* Spinner */}
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent border-b-transparent rounded-full animate-spin"></div>
-                          {/* Texto */}
-                          <span className="text-gray-300 font-medium">Cargando…</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
+
+                {/* Loading overlay opcional */}
+                {loadingDownload && (
+                  <div className="w-full relative mt-3 md:mt-0">
+                    <div className="relative w-full rounded-md border-2 border-gray-600 bg-gray-800 overflow-hidden shadow-lg">
+                      <DownloadingView />
+                    </div>
+                  </div>
+                )}
               </div>
+
             </form>
           </div>
         </section>
