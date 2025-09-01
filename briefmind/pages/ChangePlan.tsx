@@ -142,13 +142,13 @@ class BuyBrief extends Component<any, BuyBriefState> {
         <nav className="sticky top-0 z-50 w-full bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10 px-6 py-4">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <button
-              onClick={() => this.props.router.push('/Index')}
+              onClick={() => this.props.router.push('/')}
               className="text-xl md:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
             >
               BriefNest
             </button>
             <div className="flex gap-6 items-center text-sm md:text-base">
-              <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
+              <Link href="/" className="hover:text-cyan-300 transition">Inicio</Link>
               <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar Briefs</Link>
               <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
               <button onClick={this.handleLogout} className="text-red-400 hover:text-red-500 font-semibold transition">

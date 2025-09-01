@@ -405,7 +405,7 @@ export default function ProjectBriefForm(): JSX.Element {
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push('/Index');
+    router.push('/');
   };
 
   /** Pasos del formulario (mismos campos que tenías) */
