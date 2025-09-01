@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Component } from 'react';
-import { FaCheck, FaCrown } from 'react-icons/fa';
+import { FaCheck, FaCrown, FaSignOutAlt } from 'react-icons/fa';
 import { withRouter } from 'next/router';
 import Link from 'next/link';
 
@@ -12,35 +12,63 @@ type Plan = {
   extraPrice: number;
   features: string[];
   accent: string;
+  description:string;
   popular?: boolean;
 };
 
 const plans: Plan[] = [
-  {
+    {
     name: 'Basic',
     price: 10,
     briefs: 3,
     extraPrice: 7,
-    features: ['Genera briefs estratégicos con IA (Español/Inglés)', 'Exportación en PDF', 'Entregables en PDF 100% profesionales','Próximamente: historial de briefs*'],
+    features: [
+      'Genera briefs estratégicos en Español con un acabado profesional',
+      'Documentos listos para entregar sin necesidad de edición',
+      'Estructura clara y jerárquica: secciones numeradas y subtítulos',
+      'Opción de exportar y reutilizar el JSON del formulario'
+    ],
     accent: 'from-cyan-500/20',
+    description: `🎯 Para freelancers que necesitan rapidez y profesionalidad.
+  Incluye 3 briefs; extras: $7/brief.`
   },
   {
     name: 'Pro',
     price: 30,
     briefs: 10,
     extraPrice: 5,
-    features: ['Todo lo de Basic', 'Mejor precio por brief', 'Pensado para profesionales activos','Próximamente: plantillas reutilizables'],
+    features: [
+      'Incluye todas las funciones del plan Basic',
+      'Genera briefs también en Inglés',
+      'IA optimizada para mayor detalle y claridad en los documentos',
+      '10 briefs incluidos (extras $5/brief)',
+      'Formato más profesional: insights destacados y estructura premium',
+      'Ideal para profesionales con clientes internacionales'
+    ],
     accent: 'from-blue-500/20',
     popular: true,
+    description: `🎯 Para profesionales con clientes internacionales.
+  Incluye 10 briefs; extras $5/brief. Briefs más detallados y con formato listo para entregar.`
   },
   {
     name: 'Premium',
     price: 80,
     briefs: 30,
     extraPrice: 3,
-    features: ['Mejor volumen y precio unitario', 'Optimizado para agencias y equipos', 'Próximamente: espacios colaborativos y dashboard avanzado*'],
+    features: [
+      'Incluye todas las funciones del plan Pro',
+      'IA avanzada para insights estratégicos más profundos y personalizados',
+      'Briefs con formato premium: tablas, badges y cajas listas para entregar',
+      '30 briefs incluidos (extras $3/brief)',
+      'Pensado para agencias y equipos: máxima calidad y presentación profesional garantizada'
+    ],
     accent: 'from-purple-500/20',
-  },
+    description: `🎯 Diseñado para agencias y equipos creativos.
+  Incluye 30 briefs; extras $3/brief. Estrategia avanzada y formato premium listos para clientes finales.`
+  }
+
+  ,
+
 ];
 
 interface BuyBriefState {
@@ -137,25 +165,21 @@ class BuyBrief extends Component<any, BuyBriefState> {
     const selectedPlanObj = plans.find((p) => p.name.toLowerCase() === selectedPlan.toLowerCase());
 
     return (
-      <main className="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#111a2d] to-[#1a1f36] text-white">
-        {/* Navbar */}
-        <nav className="sticky top-0 z-50 w-full bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10 px-6 py-4">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <button
-              onClick={() => this.props.router.push('/Index')}
-              className="text-xl md:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
-            >
-              BriefMind
-            </button>
-            <div className="flex gap-6 items-center text-sm md:text-base">
-              <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
-              <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar Briefs</Link>
-              <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
-              <button onClick={this.handleLogout} className="text-red-400 hover:text-red-500 font-semibold transition">
-                Cerrar sesión
+    <main className="min-h-screen bg-gradient-to-br from-[#0F172A] to-[#1a1f36] text-white font-sans">
+      {/* Navbar */}
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-[#111827]/90 backdrop-blur-md border-b border-gray-700 shadow-lg">
+        <div className="text-2xl font-extrabold text-blue-400 cursor-pointer hover:text-blue-300 transition">
+          BriefNest
+        </div>
+        <div className="flex gap-6 items-center text-lg">
+              <Link href="/" className="hover:text-cyan-300 transition">Inicio</Link>
+              <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar</Link>
+              <Link href="/BriefForm" className="hover:text-cyan-300 transition">Brief</Link>
+              <Link href="/Checkout" className="hover:text-cyan-300 transition">Suscripción</Link>              
+              <button onClick={this.handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-500 transition">
+                <FaSignOutAlt /> Cerrar sesión
               </button>
             </div>
-          </div>
         </nav>
 
         {/* Header */}

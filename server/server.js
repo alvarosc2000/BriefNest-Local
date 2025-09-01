@@ -8,7 +8,10 @@ const projectsRoutes = require('./routes/projects');
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+
+// Aumentar límite para JSON grande
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 app.use('/api/users', usersRoutes);
 app.use('/api/projects', projectsRoutes);

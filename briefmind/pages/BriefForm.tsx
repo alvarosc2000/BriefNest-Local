@@ -39,7 +39,30 @@ interface BriefFormData {
 }
 
 /** Opciones reutilizables */
-const tonesOptions = ['Inglés','Español'];
+
+
+const getToneOptions = (plan: string | null) => {
+  // Basic: solo español
+  if (!plan || plan.toLowerCase() === 'basic') {
+    return ['Español'];
+  }
+
+  // Pro
+  if (plan.toLowerCase() === 'pro') {
+    return ['Español', 'Inglés'];
+  }
+
+  // Equipo
+  if (plan.toLowerCase() === 'equipo') {
+    return ['Español', 'Inglés'];
+  }
+
+  // fallback → solo español
+  return ['Español'];
+};
+
+
+
 const channelsOptions = [
   'Instagram',
   'Facebook',
@@ -62,6 +85,7 @@ const deliverablesOptions = [
   'Blogs',
   'Landing Pages',
 ];
+
 
 /** Estado inicial */
 const initialData: BriefFormData = {
@@ -122,7 +146,7 @@ export default function ProjectBriefForm(): JSX.Element {
 
   useEffect(() => {
     // Cargar borrador y datos desde localStorage
-    const saved = localStorage.getItem('briefmind_draft');
+    const saved = localStorage.getItem('briefnest');
     if (saved) {
       try {
         setForm(JSON.parse(saved));
@@ -185,7 +209,7 @@ export default function ProjectBriefForm(): JSX.Element {
   useEffect(() => {
     // Persistir borrador en localStorage
     try {
-      localStorage.setItem('briefmind_draft', JSON.stringify(form));
+      localStorage.setItem('briefnest', JSON.stringify(form));
     } catch {
       // ignore
     }
@@ -273,7 +297,7 @@ export default function ProjectBriefForm(): JSX.Element {
   };
 
   const handleSaveDraft = () => {
-    localStorage.setItem('briefmind_draft', JSON.stringify(form));
+    localStorage.setItem('briefnest', JSON.stringify(form));
     toast('Borrador guardado');
   };
 
@@ -349,7 +373,7 @@ export default function ProjectBriefForm(): JSX.Element {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'briefmind.pdf';
+        a.download = 'briefnest.pdf';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -364,7 +388,7 @@ export default function ProjectBriefForm(): JSX.Element {
         });
 
         alert('Brief enviado y PDF descargado.');
-        localStorage.removeItem('briefmind_draft');
+        localStorage.removeItem('briefnest');
         setForm(initialData);
         setStep(0);
         setErrors({});
@@ -398,6 +422,7 @@ export default function ProjectBriefForm(): JSX.Element {
         </div>
       ),
     },
+
     {
       title: 'Objetivos y situación',
       content: (
@@ -417,7 +442,7 @@ export default function ProjectBriefForm(): JSX.Element {
           <Textarea label="Necesidades de la audiencia" name="audienceNeeds" value={form.audienceNeeds} onChange={handleChange} />
           <Textarea label="Mensaje principal" name="mainMessage" value={form.mainMessage} onChange={handleChange} required error={errors.mainMessage} />
           <Textarea label="Diferenciación" name="differentiation" value={form.differentiation} onChange={handleChange} />
-          <Select label="Idioma" name="tone" value={form.tone} onChange={handleChange} options={tonesOptions} />
+          <Select label="Idioma" name="tone" value={form.tone} onChange={handleChange} options={getToneOptions(userPlan)} />
         </div>
       ),
     },
@@ -453,26 +478,21 @@ export default function ProjectBriefForm(): JSX.Element {
 
   /** ---------- Renderizado ---------- */
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#0D1626] to-[#071226] text-slate-100">
-      {/* NAVBAR (sin userPlan ni userBrief) */}
- {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <button
-            onClick={() => router.push('/Index')}
-            className="text-xl md:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
-          >
-            BriefMind
-          </button>
-          <div className="flex gap-6 items-center text-sm md:text-base">
-            <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
-            <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar Briefs</Link>
-            <Link href="/BriefForm" className="hover:text-cyan-300 transition">Crear Brief</Link>
-            <button onClick={handleLogout} className="text-red-400 hover:text-red-500 font-semibold transition">
-              Cerrar sesión
-            </button>
-          </div>
+    <main className="min-h-screen bg-gradient-to-br from-[#0F172A] to-[#1a1f36] text-white font-sans">
+      {/* Navbar */}
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-[#111827]/90 backdrop-blur-md border-b border-gray-700 shadow-lg">
+        <div className="text-2xl font-extrabold text-blue-400 cursor-pointer hover:text-blue-300 transition" >
+          BriefNest
         </div>
+        <div className="flex gap-6 items-center text-lg">
+              <Link href="/" className="hover:text-cyan-300 transition">Inicio</Link>
+              <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar</Link>
+              <Link href="/BriefForm" className="hover:text-cyan-300 transition">Brief</Link>
+              <Link href="/Checkout" className="hover:text-cyan-300 transition">Suscripción</Link>              
+              <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-500 transition">
+                <FaSignOutAlt /> Cerrar sesión
+              </button>
+          </div>
       </nav>
 
       {/* LAYOUT: form (prioridad) + preview (menos prominente) */}
@@ -558,16 +578,17 @@ export default function ProjectBriefForm(): JSX.Element {
                     </button>
                   )}
                 </div>
-
-                {/* Loading overlay opcional */}
-                {loadingDownload && (
-                  <div className="w-full relative mt-3 md:mt-0">
-                    <div className="relative w-full rounded-md border-2 border-gray-600 bg-gray-800 overflow-hidden shadow-lg">
-                      <DownloadingView />
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {/* DownloadingView debajo del formulario, ocupando todo el ancho */}
+              {loadingDownload && (
+                <div className="mt-6 w-full">
+                  <div className="w-full rounded-md border-2 border-gray-600 bg-gray-800 overflow-hidden shadow-lg">
+                    <DownloadingView />
+                  </div>
+                </div>
+              )}
+
 
             </form>
           </div>
@@ -638,7 +659,7 @@ export default function ProjectBriefForm(): JSX.Element {
                 Copiar JSON
               </button>
               <button
-                onClick={() => { setForm(initialData); localStorage.removeItem('briefmind_draft'); toast('Formulario reiniciado'); }}
+                onClick={() => { setForm(initialData); localStorage.removeItem('briefnest'); toast('Formulario reiniciado'); }}
                 className="px-3 py-2 rounded-md bg-white/5 text-white hover:bg-white/10"
               >
                 Limpiar

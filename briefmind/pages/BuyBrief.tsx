@@ -109,15 +109,17 @@ export default function BuyBrief() {
     <main className="min-h-screen bg-gradient-to-br from-[#0F172A] to-[#1a1f36] text-white font-sans">
       {/* Navbar */}
       <nav className="w-full flex justify-between items-center px-8 py-4 bg-[#111827]/90 backdrop-blur-md border-b border-gray-700 shadow-lg">
-        <div className="text-2xl font-extrabold text-blue-400 cursor-pointer hover:text-blue-300 transition" onClick={() => router.push('/Index')}>
-          BriefMind
+        <div className="text-2xl font-extrabold text-blue-400 cursor-pointer hover:text-blue-300 transition" >
+          BriefNest
         </div>
-        <div className="flex gap-6 items-center text-sm">
-          <Link href="/" className="hover:text-blue-300 transition">Inicio</Link>
-          <Link href="/BriefForm" className="hover:text-blue-300 transition">Crear Brief</Link>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-500 transition">
-            <FaSignOutAlt /> Cerrar sesión
-          </button>
+        <div className="flex gap-6 items-center text-lg">
+             <Link href="/" className="hover:text-cyan-300 transition">Inicio</Link>
+              <Link href="/BuyBrief" className="hover:text-cyan-300 transition">Comprar</Link>
+              <Link href="/BriefForm" className="hover:text-cyan-300 transition">Brief</Link>
+              <Link href="/Checkout" className="hover:text-cyan-300 transition">Suscripción</Link>              
+              <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-500 transition">
+                <FaSignOutAlt /> Cerrar sesión
+              </button>
         </div>
       </nav>
 

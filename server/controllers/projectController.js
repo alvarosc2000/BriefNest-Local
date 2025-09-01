@@ -60,6 +60,9 @@ exports.createProject = async (req, res) => {
 
 if (data.tone === "Inglés") {
   promptBase = `
+
+        Translate all input data into English where necessary, then generate the brief in English following the instructions below.
+        
         You are a senior marketing, communication, and brand strategist with experience in top-tier agencies. 
         You have led repositionings, integrated campaigns, digital launches, and premium brand building, aligning business vision, creativity, and execution with strategic excellence.
 

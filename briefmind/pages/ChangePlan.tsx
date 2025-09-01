@@ -145,7 +145,7 @@ class BuyBrief extends Component<any, BuyBriefState> {
               onClick={() => this.props.router.push('/Index')}
               className="text-xl md:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
             >
-              BriefMind
+              BriefNest
             </button>
             <div className="flex gap-6 items-center text-sm md:text-base">
               <Link href="/Index" className="hover:text-cyan-300 transition">Inicio</Link>
