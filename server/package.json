@@ -1,15 +1,15 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "description": "Backend de BriefMind",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["saas", "briefs", "ai"],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
